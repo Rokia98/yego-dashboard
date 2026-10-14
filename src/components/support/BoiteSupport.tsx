@@ -17,6 +17,7 @@ import {
   TONE_STATUT_SUPPORT,
   libelleCategorie,
   libelleRole,
+  gestionnaireSupport,
 } from '@/features/support';
 import type { DemandeSupport, FiltresSupport } from '@/features/support';
 import { compagniesApi } from '@/features/compagnies';
@@ -30,10 +31,22 @@ type Props = {
   user: AuthUser | null;
 };
 
+// Gestionnaire (SUPPORT_COMPAGNIE) : onglet « Demandes des voyageurs » par défaut.
+const FILTRES_GESTIONNAIRE: FiltresSupport = { ...FILTRES_SUPPORT_DEFAUT, origine: 'voyageur' };
+
+const ONGLETS_GESTIONNAIRE = [
+  { valeur: 'voyageur' as const, label: 'Demandes des voyageurs' },
+  { valeur: 'compagnie' as const, label: 'Mes demandes à Yègo' },
+];
+
 export default function BoiteSupport({ espace, user }: Props) {
   const admin = espace === 'admin';
-  const filtres = useFiltres<FiltresSupport>(FILTRES_SUPPORT_DEFAUT, 'q');
+  // Le gestionnaire voit aussi les demandes des voyageurs liées à sa compagnie
+  // (réservation jointe) ; les agents ne voient que les leurs.
+  const gestionnaire = !admin && gestionnaireSupport(user);
+  const filtres = useFiltres<FiltresSupport>(gestionnaire ? FILTRES_GESTIONNAIRE : FILTRES_SUPPORT_DEFAUT, 'q');
   const f = filtres.valeurs;
+  const ongletVoyageurs = gestionnaire && filtres.appliques.origine === 'voyageur';
   const [selection, setSelection] = useState<number | null>(null);
   const [creation, setCreation] = useState(false);
   const [compagnies, setCompagnies] = useState<{ valeur: string; label: string }[]>([]);
@@ -63,6 +76,18 @@ export default function BoiteSupport({ espace, user }: Props) {
   return (
     <>
       <FiltresBar nbActifs={filtres.nbActifs} onReinitialiser={filtres.reinitialiser}>
+        {gestionnaire && (
+          <FiltreSegments
+            label="Demandes"
+            value={f.origine === 'compagnie' ? 'compagnie' : 'voyageur'}
+            onChange={(v) => {
+              setSelection(null);
+              setCreation(false);
+              filtres.set('origine', v);
+            }}
+            options={ONGLETS_GESTIONNAIRE}
+          />
+        )}
         <FiltreRecherche label="Recherche" value={f.q} onChange={(v) => filtres.set('q', v)} placeholder="Sujet, nom ou n°" />
         <FiltreSegments
           label="Statut"
@@ -112,13 +137,13 @@ export default function BoiteSupport({ espace, user }: Props) {
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-line-soft px-5 py-4">
             <h2 className="text-sm font-semibold text-ink">
-              {admin ? 'Demandes' : 'Mes demandes'}
+              {admin ? 'Demandes' : ongletVoyageurs ? 'Demandes des voyageurs' : gestionnaire ? 'Mes demandes à Yègo' : 'Mes demandes'}
               <span className="ml-2 text-xs font-normal text-ink-faint">
                 {liste.items.length}
                 {liste.aSuite ? '+' : ''}
               </span>
             </h2>
-            {!admin && (
+            {!admin && !ongletVoyageurs && (
               <Button
                 onClick={() => {
                   setSelection(null);
@@ -143,7 +168,9 @@ export default function BoiteSupport({ espace, user }: Props) {
                   ? 'Aucune demande pour ces filtres.'
                   : admin
                     ? 'Aucune demande de support.'
-                    : 'Vous n’avez ouvert aucune demande. Un problème ? « Nouvelle demande ».'}
+                    : ongletVoyageurs
+                      ? 'Aucune demande de voyageur sur vos réservations.'
+                      : 'Vous n’avez ouvert aucune demande. Un problème ? « Nouvelle demande ».'}
               </p>
             </div>
           ) : (
@@ -176,6 +203,13 @@ export default function BoiteSupport({ espace, user }: Props) {
                               {d.auteur?.nom ?? libelleRole(String(d.auteurRole))}
                               {d.auteurRole === 'user' ? ' (voyageur)' : ''}
                               {d.compagnie ? ` · ${d.compagnie.nom}` : ''}
+                            </>
+                          )}
+                          {ongletVoyageurs && (
+                            <>
+                              {' · '}
+                              {d.auteur?.nom ?? 'Voyageur'}
+                              {d.reservationId ? ` · réservation #${d.reservationId}` : ''}
                             </>
                           )}
                         </p>

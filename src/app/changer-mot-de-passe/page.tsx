@@ -23,7 +23,9 @@ export default function ChangerMotDePassePage() {
         router.replace('/');
         return;
       }
-      setObligatoire(current.motDePasseTemporaire);
+      // ?obligatoire=1 : posé par http.ts sur un 403 MOT_DE_PASSE_A_CHANGER.
+      const imposeParApi = new URLSearchParams(window.location.search).get('obligatoire') === '1';
+      setObligatoire(current.motDePasseTemporaire || imposeParApi);
     });
   }, [router]);
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 
 /** Largeur en px d'un élément, suivie via ResizeObserver (pour des SVG nets). */
-export function useElementWidth(ref: RefObject<HTMLElement>, fallback = 600): number {
+export function useElementWidth(ref: RefObject<HTMLElement | null>, fallback = 600): number {
   const [width, setWidth] = useState(fallback);
 
   useEffect(() => {

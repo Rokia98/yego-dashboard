@@ -9,6 +9,8 @@ export type CreateAgentInput = {
   compagnieId?: number;
 };
 
+// motDePasse : réinitialisation par le gestionnaire → mot de passe provisoire, à changer
+// à la 1re connexion. Réinitialiser ou désactiver (actif: false) coupe toutes les sessions de l'agent.
 export type UpdateAgentInput = Partial<Omit<CreateAgentInput, 'compagnieId'>> & { actif?: boolean };
 
 export const agentsApi = {

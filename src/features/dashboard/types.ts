@@ -8,6 +8,8 @@ export type DashboardResume = {
   };
   chiffreAffaires: {
     parStatutPaiement: Record<string, { nombre: number; montant: string }>;
+    /** Frais de service encaissés sur la période (revenu Yègo, hors CA compagnies) ; admin uniquement (omis pour company_admin / agent). */
+    fraisService?: string;
   };
   occupation: {
     departs: number;

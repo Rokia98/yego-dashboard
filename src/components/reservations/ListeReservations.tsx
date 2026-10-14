@@ -29,7 +29,7 @@ import {
   correspondReservation,
 } from '@/features/reservations';
 import type { Reservation, FiltresReservations } from '@/features/reservations';
-import { paiementsApi, estPaiementJeko } from '@/features/paiements';
+import { paiementsApi, estPaiementJeko, totalPaye } from '@/features/paiements';
 import { compagniesApi } from '@/features/compagnies';
 import { usePagedList } from '@/lib/pagination';
 import { useFiltres, jourIso } from '@/lib/filtres';
@@ -317,6 +317,14 @@ export default function ListeReservations({ espace }: Props) {
                               ? 'remboursé'
                               : 'non payé'}
                         </span>
+                        {Number(r.paiement?.fraisService ?? 0) > 0 && (
+                          <span
+                            className="block text-[11px] text-ink-faint"
+                            title="Billets + frais de service Yègo (non remboursés, non reversés)"
+                          >
+                            + {formatFcfa(r.paiement!.fraisService)} frais · {formatFcfa(totalPaye(r.paiement!))} payés
+                          </span>
+                        )}
                         {estPaiementJeko(r.paiement) && (
                           <span className="block text-[11px] text-ink-faint">
                             En ligne (Jèko){r.paiement?.reversementId != null ? ' · reversé' : ''}

@@ -7,7 +7,9 @@ export type PaiementStatut = 'en_attente' | 'paye' | 'echoue' | 'rembourse' | st
 export type Paiement = {
   id: number;
   reservationId: number;
-  montant: string;
+  montant: string; // prix des billets : part compagnie (CA, remboursements, reversements)
+  /** Frais Yègo payés en plus par le voyageur (taux de GET /paiements/frais-service, 3,5 % en ligne ; 0 au guichet ; les paiements passés gardent leur taux d'origine) ; ni remboursés ni reversés. */
+  fraisService?: string;
   moyenPaiement: string;
   referenceTransaction: string | null;
   statut: PaiementStatut;
@@ -23,6 +25,11 @@ export type Paiement = {
 /** Paiement encaissé en ligne sur le magasin Jèko de Yègo (vs guichet). */
 export function estPaiementJeko(p: Pick<Paiement, 'jekoReference'> | null | undefined): boolean {
   return p?.jekoReference != null;
+}
+
+/** Montant réellement débité au voyageur : billets + frais de service. */
+export function totalPaye(p: Pick<Paiement, 'montant' | 'fraisService'>): number {
+  return Number(p.montant) + Number(p.fraisService ?? 0);
 }
 
 export const LIBELLE_MOYEN_PAIEMENT: Record<string, string> = {

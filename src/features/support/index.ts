@@ -9,6 +9,8 @@ export {
   estDemandeVoyageur,
   peutTraiter,
   estAuteur,
+  gestionnaireSupport,
+  libelleAuteurMessage,
 } from './labels';
 export type {
   CategorieSupport,

@@ -20,7 +20,7 @@ export default function CoordonneesReversement({
   compagnieId: number;
   onEnregistre?: (c: Coordonnees) => void;
 }) {
-  const [actuelles, setActuelles] = useState<Coordonnees | null>(null);
+  const [actuelles, setActuelles] = useState<Coordonnees | null>(null); // null = non renseigné
   const [moyen, setMoyen] = useState<MoyenReversement | ''>('');
   const [telephone, setTelephone] = useState('');
   const [chargement, setChargement] = useState(true);
@@ -38,8 +38,8 @@ export default function CoordonneesReversement({
       .then((c) => {
         if (!actif) return;
         setActuelles(c);
-        setMoyen(c.moyen ?? '');
-        setTelephone(c.telephone ? formatTelephone(c.telephone) : '');
+        setMoyen(c?.moyen ?? '');
+        setTelephone(c?.telephone ? formatTelephone(c.telephone) : '');
       })
       .catch((e) => actif && setErreur(e instanceof Error ? e.message : 'Erreur de chargement'))
       .finally(() => actif && setChargement(false));
@@ -58,7 +58,7 @@ export default function CoordonneesReversement({
     try {
       const c = await reversementsApi.setCoordonnees(compagnieId, { moyen, telephone: telephonePourApi(telephone) });
       setActuelles(c);
-      setTelephone(c.telephone ? formatTelephone(c.telephone) : '');
+      setTelephone(c?.telephone ? formatTelephone(c.telephone) : '');
       setSucces(true);
       onEnregistre?.(c);
     } catch (err) {

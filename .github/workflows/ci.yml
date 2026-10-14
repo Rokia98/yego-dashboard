@@ -16,17 +16,15 @@ jobs:
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22' # Next 16 exige Node >= 20.9
           cache: 'npm'
 
       - name: Installer les dépendances
         run: npm ci
 
       - name: Audit des dépendances
+        # Bloquant : une faille élevée ou critique dans les dépendances de prod fait échouer la CI.
         run: npm audit --omit=dev --audit-level=high
-        # Informatif tant que Next 14 (plus corrigé) est utilisé : à rendre
-        # bloquant après la migration vers Next 15.5+.
-        continue-on-error: true
 
       - name: Lint
         run: npm run lint

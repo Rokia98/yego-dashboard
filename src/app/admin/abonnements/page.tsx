@@ -60,7 +60,6 @@ export default function AdminAbonnementsPage() {
     Promise.all([charger(), compagniesApi.list().then(setCompagnies).catch(() => setCompagnies([]))]).finally(() =>
       setChargement(false),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   async function handleSubmit(e: React.FormEvent) {

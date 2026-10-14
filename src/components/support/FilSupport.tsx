@@ -12,6 +12,7 @@ import {
   libelleRole,
   peutTraiter,
   estAuteur,
+  libelleAuteurMessage,
 } from '@/features/support';
 import type { DemandeSupport, DemandeSupportDetail, StatutSupport } from '@/features/support';
 import type { AuthUser } from '@/lib/auth';
@@ -80,6 +81,8 @@ export default function FilSupport({ demandeId, user, onMaj, onFermer }: Props) 
   const auteur = estAuteur(demande, user);
   const fermee = demande.statut === 'fermee';
   const admin = user?.role === 'admin';
+  // Gestionnaire traitant la demande d'un voyageur de sa compagnie (pas de notes internes).
+  const reponseCompagnie = traitant && !admin;
 
   async function envoyer() {
     const contenu = reponse.trim();
@@ -208,7 +211,8 @@ export default function FilSupport({ demandeId, user, onMaj, onFermer }: Props) 
                 <p className={`mb-1 flex items-center gap-1 text-[11px] ${moi && !m.interne ? 'text-white/80' : 'text-ink-faint'}`}>
                   {m.interne && <Lock className="h-3 w-3" strokeWidth={2} />}
                   {m.interne ? 'Note interne · ' : ''}
-                  {m.auteur?.nom ?? libelleRole(String(m.auteurRole))} · {formatDateHeure(m.dateCreation)}
+                  {libelleAuteurMessage({ auteurRole: String(m.auteurRole), auteur: m.auteur }, demande.compagnie)} ·{' '}
+                  {formatDateHeure(m.dateCreation)}
                 </p>
                 <p className="whitespace-pre-wrap break-words">{m.contenu}</p>
               </div>
@@ -233,7 +237,13 @@ export default function FilSupport({ demandeId, user, onMaj, onFermer }: Props) 
               }}
               maxLength={MAX_MESSAGE}
               rows={3}
-              placeholder={interne ? 'Note visible uniquement par l’équipe Yègo…' : 'Votre réponse… (Ctrl+Entrée pour envoyer)'}
+              placeholder={
+                interne
+                  ? 'Note visible uniquement par l’équipe Yègo…'
+                  : reponseCompagnie
+                    ? `Votre réponse au voyageur, au nom de ${demande.compagnie?.nom ?? 'votre compagnie'}… (Ctrl+Entrée pour envoyer)`
+                    : 'Votre réponse… (Ctrl+Entrée pour envoyer)'
+              }
               className="w-full resize-y rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">

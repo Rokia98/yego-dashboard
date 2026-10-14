@@ -15,6 +15,8 @@ import {
   ScrollText,
   FileText,
   Banknote,
+  HandCoins,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 import type { UserRole } from './auth';
@@ -63,6 +65,7 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { label: 'Vue d’ensemble', href: '/admin', icon: LayoutDashboard },
       { label: 'Compagnies', href: '/admin/compagnies', icon: Building2 },
+      { label: 'Utilisateurs', href: '/admin/utilisateurs', icon: UserCog },
     ],
   },
   {
@@ -71,6 +74,7 @@ export const ADMIN_NAV: NavGroup[] = [
       { label: 'Réservations', href: '/admin/reservations', icon: ClipboardList },
       { label: 'Remboursements', href: '/admin/remboursements', icon: Undo2 },
       { label: 'Reversements', href: '/admin/reversements', icon: Banknote },
+      { label: 'Retraits Yègo', href: '/admin/retraits', icon: HandCoins },
       { label: 'Abonnements', href: '/admin/abonnements', icon: Receipt },
     ],
   },

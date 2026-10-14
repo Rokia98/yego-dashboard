@@ -18,6 +18,10 @@ import { formatFcfa, formatHeure } from '@/lib/format';
 import { FiltresBar, FiltreRecherche, FiltreSegments } from '@/components/ui/Filtres';
 import { normaliser, useFiltres } from '@/lib/filtres';
 
+// Bornes imposées par l'API (0.29.0) à la création et à la modification d'un trajet.
+const PRIX_MIN = 100;
+const PRIX_MAX = 1_000_000;
+
 type Filtres = { q: string; statut: '' | 'actif' | 'inactif' };
 const FILTRES_DEFAUT: Filtres = { q: '', statut: '' };
 
@@ -54,7 +58,6 @@ export default function TrajetsPage() {
       chargerTrajets(user.compagnieId),
       villesApi.list().then(setVilles).catch(() => setVilles([])),
     ]).finally(() => setChargement(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -65,6 +68,11 @@ export default function TrajetsPage() {
       setErreur('Les villes de départ et d’arrivée doivent être différentes.');
       return;
     }
+    const prix = Number(champs.prix);
+    if (!Number.isFinite(prix) || prix < PRIX_MIN || prix > PRIX_MAX) {
+      setErreur(`Le prix doit être compris entre ${formatFcfa(PRIX_MIN)} et ${formatFcfa(PRIX_MAX)}.`);
+      return;
+    }
     setEnvoi(true);
     try {
       await trajetsApi.create({
@@ -73,7 +81,7 @@ export default function TrajetsPage() {
         villeArriveeId: Number(champs.villeArriveeId),
         heureDepart: champs.heureDepart,
         heureArriveeEstimee: champs.heureArriveeEstimee || undefined,
-        prix: Number(champs.prix),
+        prix,
         joursRecurrence: champs.joursRecurrence || undefined,
       });
       setChamps(CHAMPS_VIDES);
@@ -148,7 +156,7 @@ export default function TrajetsPage() {
                 </Select>
               </Field>
               <Field label="Prix (FCFA)">
-                <Input type="number" min="0" required value={champs.prix} onChange={(e) => setChamps({ ...champs, prix: e.target.value })} />
+                <Input type="number" min={PRIX_MIN} max={PRIX_MAX} step="1" required value={champs.prix} onChange={(e) => setChamps({ ...champs, prix: e.target.value })} />
               </Field>
               <Field label="Heure de départ">
                 <Input type="time" required value={champs.heureDepart} onChange={(e) => setChamps({ ...champs, heureDepart: e.target.value })} />

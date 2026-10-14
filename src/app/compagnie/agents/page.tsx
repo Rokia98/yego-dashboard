@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, X } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -18,6 +18,9 @@ import { genererMotDePasse } from '@/lib/motdepasse';
 
 const CHAMPS_VIDES = { nom: '', telephone: '', motDePasse: '', email: '' };
 
+// Identifiants provisoires à transmettre à l'agent (affichés une seule fois).
+type Identifiants = { nom: string; telephone: string; motDePasse: string; reinitialisation: boolean };
+
 export default function AgentsPage() {
   const { user, ready } = useAuthGuard(['company_admin']);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -27,6 +30,8 @@ export default function AgentsPage() {
   const [envoi, setEnvoi] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
   const [mdpVisible, setMdpVisible] = useState(false);
+  const [identifiants, setIdentifiants] = useState<Identifiants | null>(null);
+  const [copie, setCopie] = useState(false);
 
   function charger() {
     return agentsApi.list().then(setAgents).catch(() => setAgents([]));
@@ -36,7 +41,6 @@ export default function AgentsPage() {
     if (!ready) return;
     setChargement(true);
     charger().finally(() => setChargement(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -54,6 +58,7 @@ export default function AgentsPage() {
         motDePasse: champs.motDePasse,
         email: champs.email || undefined,
       });
+      afficherIdentifiants({ nom: champs.nom, telephone: champs.telephone, motDePasse: champs.motDePasse, reinitialisation: false });
       setChamps(CHAMPS_VIDES);
       setMdpVisible(false);
       await charger();
@@ -64,7 +69,48 @@ export default function AgentsPage() {
     }
   }
 
+  function afficherIdentifiants(i: Identifiants) {
+    setIdentifiants(i);
+    setCopie(false);
+  }
+
+  async function copierIdentifiants() {
+    if (!identifiants) return;
+    const txt = `Yègo — accès guichet
+Téléphone : ${formatTelephone(identifiants.telephone)}
+Mot de passe provisoire : ${identifiants.motDePasse}
+(à changer à la première connexion)`;
+    try {
+      await navigator.clipboard.writeText(txt);
+      setCopie(true);
+    } catch {
+      alert(txt);
+    }
+  }
+
+  async function handleReinitialiser(a: Agent) {
+    if (
+      !confirm(
+        `Réinitialiser le mot de passe de ${a.nom} ?
+` +
+          'Un mot de passe provisoire sera généré et l’agent sera déconnecté de tous ses appareils.',
+      )
+    )
+      return;
+    const motDePasse = genererMotDePasse();
+    setEnCours(a.id);
+    try {
+      await agentsApi.update(a.id, { motDePasse });
+      afficherIdentifiants({ nom: a.nom, telephone: a.telephone, motDePasse, reinitialisation: true });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de la réinitialisation');
+    } finally {
+      setEnCours(null);
+    }
+  }
+
   async function handleToggleActif(id: number, actif: boolean) {
+    if (!actif && !confirm('Désactiver cet agent ? Il sera déconnecté de tous ses appareils.')) return;
     setEnCours(id);
     try {
       await agentsApi.update(id, { actif });
@@ -100,7 +146,7 @@ export default function AgentsPage() {
                 onChange={(e) => setChamps({ ...champs, telephone: chiffresTelephone(e.target.value) })}
               />
             </Field>
-            <Field label="Mot de passe">
+            <Field label="Mot de passe provisoire">
               <div className="flex gap-2">
                 <Input
                   type={mdpVisible ? 'text' : 'password'}
@@ -137,6 +183,7 @@ export default function AgentsPage() {
             </Field>
           </div>
 
+          <p className="mt-3 text-xs text-ink-faint">L’agent changera ce mot de passe provisoire à sa première connexion.</p>
           {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
 
           <Button type="submit" disabled={envoi} className="mt-4">
@@ -145,6 +192,34 @@ export default function AgentsPage() {
         </form>
       </Card>
 
+      {identifiants && (
+        <Card className="mb-6 border-accent/40 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-ink">
+                {identifiants.reinitialisation ? 'Mot de passe réinitialisé' : 'Agent créé'} — {identifiants.nom}
+              </h2>
+              <p className="mt-1 text-xs text-ink-soft">
+                Transmettez ces identifiants à l’agent : ils ne seront plus affichés.
+                {identifiants.reinitialisation && ' L’agent a été déconnecté de ses appareils.'}
+              </p>
+              <p className="mt-3 text-sm text-ink">
+                Téléphone : <span className="font-semibold">{formatTelephone(identifiants.telephone)}</span>
+                <br />
+                Mot de passe provisoire : <span className="font-mono font-semibold">{identifiants.motDePasse}</span>
+              </p>
+            </div>
+            <Button variant="ghost" onClick={() => setIdentifiants(null)} aria-label="Fermer" className="!px-2">
+              <X className="h-4 w-4" strokeWidth={1.75} />
+            </Button>
+          </div>
+          <Button variant="secondary" onClick={copierIdentifiants} className="mt-4">
+            {copie ? <Check className="h-4 w-4" strokeWidth={1.75} /> : <Copy className="h-4 w-4" strokeWidth={1.75} />}
+            {copie ? 'Copié' : 'Copier les identifiants'}
+          </Button>
+        </Card>
+      )}
+
       <Card>
         <CardHeader title="Agents de la compagnie" right={`${agents.length} agent${agents.length > 1 ? 's' : ''}`} />
         {chargement ? (
@@ -152,7 +227,7 @@ export default function AgentsPage() {
         ) : agents.length === 0 ? (
           <TableMessage>Aucun agent enregistré.</TableMessage>
         ) : (
-          <Table minWidth="640px">
+          <Table minWidth="760px">
             <THead>
               <Th>Nom</Th>
               <Th>Téléphone</Th>
@@ -170,15 +245,22 @@ export default function AgentsPage() {
                     <Badge tone={a.actif ? 'success' : 'neutral'}>{a.actif ? 'actif' : 'désactivé'}</Badge>
                   </Td>
                   <Td>
-                    {a.actif ? (
-                      <Button variant="link-danger" onClick={() => handleToggleActif(a.id, false)} disabled={enCours === a.id}>
-                        Désactiver
-                      </Button>
-                    ) : (
-                      <Button variant="link-success" onClick={() => handleToggleActif(a.id, true)} disabled={enCours === a.id}>
-                        Réactiver
-                      </Button>
-                    )}
+                    <div className="flex gap-3">
+                      {a.actif && (
+                        <Button variant="link" onClick={() => handleReinitialiser(a)} disabled={enCours === a.id}>
+                          Réinitialiser le mot de passe
+                        </Button>
+                      )}
+                      {a.actif ? (
+                        <Button variant="link-danger" onClick={() => handleToggleActif(a.id, false)} disabled={enCours === a.id}>
+                          Désactiver
+                        </Button>
+                      ) : (
+                        <Button variant="link-success" onClick={() => handleToggleActif(a.id, true)} disabled={enCours === a.id}>
+                          Réactiver
+                        </Button>
+                      )}
+                    </div>
                   </Td>
                 </Tr>
               ))}

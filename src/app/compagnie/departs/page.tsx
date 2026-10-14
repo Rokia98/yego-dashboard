@@ -57,6 +57,9 @@ export default function DepartsPage() {
   const [envoi, setEnvoi] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
   const compagnieId = user?.compagnieId ?? null;
+  // depart:manage (planifier, modifier, annuler) : gestionnaire seulement depuis l'API 0.29.0 ;
+  // les agents gardent depart:operer (démarrer, signaler un retard).
+  const gestionnaire = user?.role === 'company_admin';
 
   const filtres = useFiltres<FiltresDeparts>(FILTRES_DEPARTS_DEFAUT);
   const appliques = filtres.appliques;
@@ -85,7 +88,6 @@ export default function DepartsPage() {
     trajetsApi.listByCompagnie(compagnieId).then(setTrajets).catch(() => setTrajets([]));
     vehiculesApi.list().then(setVehicules).catch(() => setVehicules([]));
     chauffeursApi.list().then(setChauffeurs).catch(() => setChauffeurs([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, compagnieId]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -169,61 +171,71 @@ export default function DepartsPage() {
 
   return (
     <DashboardShell nav={COMPAGNIE_NAV} title="Espace compagnie" userLabel={user?.telephone}>
-      <PageHeader eyebrow="Espace opérateur" title="Départs" subtitle="Planifiez les occurrences datées de vos trajets et suivez-les en temps réel." />
+      <PageHeader
+        eyebrow="Espace opérateur"
+        title="Départs"
+        subtitle={
+          gestionnaire
+            ? 'Planifiez les occurrences datées de vos trajets et suivez-les en temps réel.'
+            : 'Démarrez les départs, signalez les retards et suivez-les en temps réel.'
+        }
+      />
 
-      <Card className="mb-6 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Planifier un départ</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Trajet">
-              <Select required value={champs.trajetId} onChange={(e) => setChamps({ ...champs, trajetId: e.target.value })}>
-                <option value="">Sélectionner...</option>
-                {trajets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.villeDepart.nom} → {t.villeArrivee.nom} ({formatFcfa(t.prix)})
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Date de départ">
-              <Input type="date" required value={champs.dateDepart} onChange={(e) => setChamps({ ...champs, dateDepart: e.target.value })} />
-            </Field>
-            <Field label="Véhicule (optionnel)">
-              <Select value={champs.vehiculeId} onChange={(e) => onChoixVehicule(e.target.value)}>
-                <option value="">Aucun</option>
-                {vehicules.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.immatriculation}{v.typeVehicule ? ` — ${v.typeVehicule}` : ''} ({v.capacite} pl.)
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Places totales">
-              <Input
-                type="number"
-                min="1"
-                required
-                value={champs.placesTotales}
-                onChange={(e) => setChamps({ ...champs, placesTotales: e.target.value })}
-              />
-            </Field>
-            <Field label="Chauffeur (optionnel)">
-              <Select value={champs.chauffeurId} onChange={(e) => setChamps({ ...champs, chauffeurId: e.target.value })}>
-                <option value="">Aucun</option>
-                {chauffeurs.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nom}</option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+      {gestionnaire && (
+        <Card className="mb-6 p-5">
+          <h2 className="mb-4 text-sm font-semibold text-ink">Planifier un départ</h2>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Trajet">
+                <Select required value={champs.trajetId} onChange={(e) => setChamps({ ...champs, trajetId: e.target.value })}>
+                  <option value="">Sélectionner...</option>
+                  {trajets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.villeDepart.nom} → {t.villeArrivee.nom} ({formatFcfa(t.prix)})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Date de départ">
+                <Input type="date" required value={champs.dateDepart} onChange={(e) => setChamps({ ...champs, dateDepart: e.target.value })} />
+              </Field>
+              <Field label="Véhicule (optionnel)">
+                <Select value={champs.vehiculeId} onChange={(e) => onChoixVehicule(e.target.value)}>
+                  <option value="">Aucun</option>
+                  {vehicules.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.immatriculation}{v.typeVehicule ? ` — ${v.typeVehicule}` : ''} ({v.capacite} pl.)
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Places totales">
+                <Input
+                  type="number"
+                  min="1"
+                  required
+                  value={champs.placesTotales}
+                  onChange={(e) => setChamps({ ...champs, placesTotales: e.target.value })}
+                />
+              </Field>
+              <Field label="Chauffeur (optionnel)">
+                <Select value={champs.chauffeurId} onChange={(e) => setChamps({ ...champs, chauffeurId: e.target.value })}>
+                  <option value="">Aucun</option>
+                  {chauffeurs.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nom}</option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
 
-          {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
+            {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
 
-          <Button type="submit" disabled={envoi} className="mt-4">
-            {envoi ? 'Création...' : 'Planifier le départ'}
-          </Button>
-        </form>
-      </Card>
+            <Button type="submit" disabled={envoi} className="mt-4">
+              {envoi ? 'Création...' : 'Planifier le départ'}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       <FiltresBar
         nbActifs={filtres.nbActifs}
@@ -309,7 +321,7 @@ export default function DepartsPage() {
                           <MapPin className="h-3.5 w-3.5" strokeWidth={1.75} /> Suivi
                         </Link>
                       )}
-                      {d.statut !== 'annule' && d.statut !== 'arrive' && (
+                      {gestionnaire && d.statut !== 'annule' && d.statut !== 'arrive' && (
                         <Button variant="link-danger" onClick={() => handleAnnuler(d.id)} disabled={enCours === d.id}>
                           Annuler
                         </Button>

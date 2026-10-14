@@ -22,6 +22,10 @@ export const ENTITES_AUDIT: { valeur: string; label: string }[] = [
   { valeur: 'paiement', label: 'Paiements' },
   { valeur: 'remboursement', label: 'Remboursements' },
   { valeur: 'ticket', label: 'Tickets' },
+  { valeur: 'reversement', label: 'Reversements' },
+  { valeur: 'demande_reversement', label: 'Demandes de reversement' },
+  { valeur: 'retrait_plateforme', label: 'Retraits Yègo' },
+  { valeur: 'compagnie', label: 'Compagnies' },
 ];
 
 export const ACTIONS_AUDIT: { valeur: string; label: string; entite: string }[] = [
@@ -32,6 +36,15 @@ export const ACTIONS_AUDIT: { valeur: string; label: string; entite: string }[] 
   { valeur: 'remboursement.demande', label: 'Demande de remboursement', entite: 'remboursement' },
   { valeur: 'remboursement.confirme', label: 'Remboursement confirmé', entite: 'remboursement' },
   { valeur: 'ticket.validation', label: 'Scan de ticket', entite: 'ticket' },
+  { valeur: 'reversement.initie', label: 'Reversement lancé', entite: 'reversement' },
+  { valeur: 'reversement.effectue', label: 'Reversement effectué', entite: 'reversement' },
+  { valeur: 'reversement.echoue', label: 'Reversement échoué', entite: 'reversement' },
+  { valeur: 'reversement.demande', label: 'Demande de reversement', entite: 'demande_reversement' },
+  { valeur: 'reversement.demande_rejetee', label: 'Demande de reversement rejetée', entite: 'demande_reversement' },
+  { valeur: 'retrait.initie', label: 'Retrait Yègo lancé', entite: 'retrait_plateforme' },
+  { valeur: 'retrait.effectue', label: 'Retrait Yègo effectué', entite: 'retrait_plateforme' },
+  { valeur: 'retrait.echoue', label: 'Retrait Yègo échoué', entite: 'retrait_plateforme' },
+  { valeur: 'compagnie.coordonnees_reversement', label: 'Compte de reversement modifié', entite: 'compagnie' },
 ];
 
 export function libelleAction(action: string): string {

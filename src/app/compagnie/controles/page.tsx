@@ -26,6 +26,8 @@ const BADGE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> =
   refuse_hors_compagnie: 'danger',
   reservation_annulee: 'danger',
   non_paye: 'danger',
+  mauvaise_date: 'warning',
+  mauvais_depart: 'warning',
 };
 
 const LIBELLE_RESULTAT: Record<string, string> = {
@@ -36,6 +38,8 @@ const LIBELLE_RESULTAT: Record<string, string> = {
   refuse_hors_compagnie: 'Autre compagnie',
   reservation_annulee: 'Réservation annulée',
   non_paye: 'Non payé',
+  mauvaise_date: 'Mauvaise date',
+  mauvais_depart: 'Mauvais départ',
 };
 
 type Filtres = { resultat: '' | 'valide' | 'refuse'; du: string; au: string };

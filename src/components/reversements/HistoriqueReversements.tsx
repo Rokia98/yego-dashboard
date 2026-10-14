@@ -6,8 +6,10 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { FiltresBar, FiltreSegments, FiltreSelect } from '@/components/ui/Filtres';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import LoadMore from '@/components/ui/LoadMore';
 import {
+  estARemettre,
   reversementsApi,
   LIBELLE_STATUT_REVERSEMENT,
   MOYENS_REVERSEMENT,
@@ -17,11 +19,18 @@ import type { Reversement, ReversementDetail } from '@/features/reversements';
 import { LIBELLE_MOYEN_PAIEMENT } from '@/features/paiements';
 import { usePagedList } from '@/lib/pagination';
 import { useFiltres } from '@/lib/filtres';
+import { DEMANDES_REVERSEMENT } from '@/lib/capacites';
 import { formatDate, formatDateHeure, formatFcfa } from '@/lib/format';
 import { formatTelephone } from '@/lib/telephone';
 
-type Filtres = { statut: '' | 'en_cours' | 'effectue' | 'echoue'; compagnieId: string };
-const DEFAUTS: Filtres = { statut: '', compagnieId: '' };
+type Filtres = { statut: '' | 'en_cours' | 'effectue' | 'echoue'; compagnieId: string; remise: '' | 'a_remettre' | 'remis' };
+const DEFAUTS: Filtres = { statut: '', compagnieId: '', remise: '' };
+
+const OPTIONS_REMISE = [
+  { valeur: '' as const, label: 'Tous' },
+  { valeur: 'a_remettre' as const, label: 'À remettre' },
+  { valeur: 'remis' as const, label: 'Remis' },
+];
 
 const OPTIONS_STATUT = [
   { valeur: '' as const, label: 'Tous' },
@@ -30,6 +39,7 @@ const OPTIONS_STATUT = [
   { valeur: 'echoue' as const, label: 'Échoués' },
 ];
 
+// Nouveau circuit : beneficiaire = numéro Yègo, moyen = wave | orange_money.
 function libelleBeneficiaire(r: Reversement): string {
   const moyen = MOYENS_REVERSEMENT.find((m) => m.valeur === r.moyen)?.label ?? r.moyen;
   return `${moyen} · ${formatTelephone(r.beneficiaire)}`;
@@ -83,21 +93,51 @@ export default function HistoriqueReversements({
   admin = false,
   compagnies,
   cleRechargement = 0,
+  onRemis,
 }: {
   admin?: boolean;
   compagnies?: { valeur: string; label: string }[];
   cleRechargement?: number;
+  onRemis?: () => void;
 }) {
   const filtres = useFiltres<Filtres>(DEFAUTS);
-  const { statut, compagnieId } = filtres.appliques;
+  const { statut, compagnieId, remise } = filtres.appliques;
   const [ouvert, setOuvert] = useState<number | null>(null);
+  const [enCours, setEnCours] = useState<number | null>(null);
 
   const fetcher = useCallback(
     ({ take, skip }: { take: number; skip: number }) =>
-      reversementsApi.list({ take, skip, statut, compagnieId: compagnieId ? Number(compagnieId) : null }),
-    [statut, compagnieId],
+      reversementsApi.list({
+        take,
+        skip,
+        statut,
+        compagnieId: compagnieId ? Number(compagnieId) : null,
+        aRemettre: !DEMANDES_REVERSEMENT || remise === '' ? null : remise === 'a_remettre',
+      }),
+    [statut, compagnieId, remise],
   );
   const liste = usePagedList<Reversement>(fetcher, `${filtres.cle}|${cleRechargement}`, 20);
+
+  // Remise en main propre à la compagnie, une fois les fonds arrivés chez Yègo.
+  async function marquerRemis(r: Reversement) {
+    const nom = r.compagnie?.nom ?? `Compagnie #${r.compagnieId}`;
+    const note = prompt(
+      `Remise de ${formatFcfa(r.montantNet)} à ${nom} (reversement #${r.id}).\n` +
+        'Note facultative (ex. « espèces remises au gérant, reçu n°12 ») :',
+    );
+    if (note == null) return;
+    setEnCours(r.id);
+    try {
+      const maj = await reversementsApi.remettre(r.id, note.trim().slice(0, 500) || undefined);
+      if (remise === 'a_remettre') liste.retirer((x) => x.id === r.id);
+      else liste.fusionner((x) => x.id === r.id, { ...r, ...maj });
+      onRemis?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de la déclaration de remise');
+    } finally {
+      setEnCours(null);
+    }
+  }
 
   return (
     <>
@@ -108,6 +148,14 @@ export default function HistoriqueReversements({
           onChange={(v) => filtres.set('statut', v)}
           options={OPTIONS_STATUT}
         />
+        {DEMANDES_REVERSEMENT && (
+          <FiltreSegments
+            label="Remise"
+            value={filtres.valeurs.remise}
+            onChange={(v) => filtres.set('remise', v)}
+            options={OPTIONS_REMISE}
+          />
+        )}
         {admin && compagnies && (
           <FiltreSelect
             label="Compagnie"
@@ -137,7 +185,7 @@ export default function HistoriqueReversements({
                 <Th>Brut</Th>
                 <Th>Commission</Th>
                 <Th>Net versé</Th>
-                <Th>Bénéficiaire</Th>
+                <Th>{DEMANDES_REVERSEMENT ? 'Transfert vers' : 'Bénéficiaire'}</Th>
                 <Th>Statut</Th>
                 <Th>{''}</Th>
               </THead>
@@ -164,6 +212,26 @@ export default function HistoriqueReversements({
                         )}
                         {r.statut === 'effectue' && r.dateEffectue && (
                           <span className="mt-1 block text-xs text-ink-faint">le {formatDate(r.dateEffectue)}</span>
+                        )}
+                        {DEMANDES_REVERSEMENT && r.remisLe && (
+                          <span className="mt-1 block max-w-[14rem] text-xs text-success">
+                            Remis le {formatDate(r.remisLe)}
+                            {r.remiseNote ? ` · ${r.remiseNote}` : ''}
+                          </span>
+                        )}
+                        {DEMANDES_REVERSEMENT && estARemettre(r) && (
+                          admin ? (
+                            <Button
+                              variant="link-success"
+                              onClick={() => marquerRemis(r)}
+                              disabled={enCours === r.id}
+                              className="mt-1 block"
+                            >
+                              {enCours === r.id ? 'Enregistrement…' : 'Marquer comme remis'}
+                            </Button>
+                          ) : (
+                            <span className="mt-1 block text-xs text-warning">Remise à venir</span>
+                          )
                         )}
                       </Td>
                       <Td>

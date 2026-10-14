@@ -1,11 +1,30 @@
-export { reversementsApi } from './api';
-export { MOYENS_REVERSEMENT, LIBELLE_STATUT_REVERSEMENT, TONE_STATUT_REVERSEMENT } from './types';
+export { reversementsApi, retraitsApi } from './api';
+export {
+  estBloque,
+  estARemettre,
+  MOYENS_REVERSEMENT,
+  MOYENS_RETRAIT,
+  LIBELLE_STATUT_REVERSEMENT,
+  TONE_STATUT_REVERSEMENT,
+  LIBELLE_STATUT_DEMANDE,
+  TONE_STATUT_DEMANDE,
+  RETRAIT_MIN_FCFA,
+  RETRAIT_MAX_FCFA,
+} from './types';
 export type {
   ApercuReversement,
+  ApercuRetrait,
   CoordonneesReversement,
+  DemandeReversement,
+  DemandeReversementStatut,
+  MoyenRetrait,
   MoyenReversement,
+  MoyenYego,
   PaiementReverse,
+  PartSolde,
+  Retrait,
   Reversement,
   ReversementDetail,
   ReversementStatut,
+  SoldeCompagnie,
 } from './types';

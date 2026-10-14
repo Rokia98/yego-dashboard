@@ -17,6 +17,8 @@ export type ResultatScan =
   | 'refuse_hors_compagnie'
   | 'reservation_annulee' // API 0.26.0+
   | 'non_paye' // API 0.26.0+
+  | 'mauvaise_date' // API 0.29.1 : scanné hors du jour du départ (ou de la veille pour un car de nuit)
+  | 'mauvais_depart' // API 0.29.1 : ne correspond pas au ?departId exigé
   | string;
 
 export type BilletScanne = {

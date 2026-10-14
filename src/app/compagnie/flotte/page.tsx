@@ -50,7 +50,6 @@ export default function FlottePage() {
     if (!ready) return;
     setChargement(true);
     Promise.all([chargerVehicules(), chargerChauffeurs()]).finally(() => setChargement(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   async function handleCreerVehicule(e: React.FormEvent) {

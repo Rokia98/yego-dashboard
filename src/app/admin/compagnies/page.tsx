@@ -71,7 +71,6 @@ export default function AdminCompagniesPage() {
     if (!ready) return;
     setChargement(true);
     charger().finally(() => setChargement(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   async function handleLogo(e: React.ChangeEvent<HTMLInputElement>) {

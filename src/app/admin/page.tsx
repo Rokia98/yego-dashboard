@@ -97,7 +97,15 @@ export default function AdminDashboard() {
           label="CA encaissé (30 j)"
           value={chargement ? '…' : `${compact(Number(caPaye?.montant ?? 0))} F`}
           icon={Wallet}
-          detail={caPaye ? formatFcfa(caPaye.montant) : undefined}
+          detail={
+            caPaye
+              ? `${formatFcfa(caPaye.montant)}${
+                  resume?.chiffreAffaires.fraisService != null
+                    ? ` · + ${formatFcfa(resume.chiffreAffaires.fraisService)} de frais de service`
+                    : ''
+                }`
+              : undefined
+          }
         >
           {sparkCa.length > 1 && <Sparkline values={sparkCa} couleur="chart-3" />}
         </StatCard>

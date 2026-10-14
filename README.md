@@ -1,6 +1,6 @@
 # Yègo Dashboard
 
-Back-office web (Next.js 14, App Router) de la plateforme **Yègo** — deux espaces :
+Back-office web (Next.js 16, App Router, React 19) de la plateforme **Yègo** — deux espaces :
 
 - `/compagnie` — pilotage quotidien d'une compagnie partenaire (`agent` / `company_admin`) :
   vente au guichet, trajets, départs + suivi GPS, réservations, remboursements, contrôles, flotte,
@@ -210,6 +210,34 @@ en attente de changement). `PATCH /auth/mot-de-passe` réémet une session
 reconnecter après le changement. Agents non concernés (mot de passe choisi par
 leur créateur, pas généré par le système).
 
+## Reversements, demandes et retraits
+
+Circuit (prochaine version de l'API) : la compagnie demande → l'admin valide en choisissant
+Wave ou Orange → Jèko transfère vers le **numéro de Yègo** (jamais vers la compagnie) →
+l'admin remet l'argent **en main propre** et le déclare. Le compte Mobile Money de la
+compagnie n'est plus utilisé, le délai de sécurité de 24 h disparaît.
+
+- **Compagnie** (`/compagnie/reversements`) : solde (`GET /dashboard/solde` : disponible,
+  en attente, en cours de remise, déjà reçu), demande de reversement (`POST /reversements/demandes`,
+  une seule en attente, annulable), historique des demandes et des reversements (remis le…). Le
+  solde disponible est aussi rappelé sur la vue d'ensemble.
+- **Admin** (`/admin/reversements`) : file des demandes, Approuver (`{ moyen }`) ou Rejeter (motif
+  transmis à la compagnie). Si Jèko refuse, la demande reste en attente. Le reversement direct
+  exige aussi `moyen`. Historique filtrable « À remettre » (`aRemettre=true`) avec
+  « Marquer comme remis » + note (`POST /reversements/:id/remise`).
+- **Retraits Yègo** (`/admin/retraits`) : retrait de la part Yègo vers le numéro fixé côté API
+  (`RETRAIT_YEGO_TELEPHONE`, Wave / Orange Money). Retirable = solde Jèko − engagements, frais
+  Jèko du retrait déjà déduits ; mot de passe redemandé, un seul retrait en cours à la fois.
+- **Frais de service** : 3,5 % en ligne (lu sur l'API, rien en dur).
+- **Utilisateurs** (`/admin/utilisateurs`) : `GET /utilisateurs` filtré (rôle, compagnie, état,
+  recherche) ; total lu dans `X-Total-Count` (`apiFetchAvecTotal`, en-tête exposé par CORS) ;
+  changement de rôle (`PATCH /utilisateurs/:id/role`, coupe les sessions).
+
+Drapeaux `DEMANDES_REVERSEMENT`, `LISTE_UTILISATEURS` et `SUPPORT_COMPAGNIE` (gestionnaire :
+onglets « Demandes des voyageurs » / « Mes demandes à Yègo », réponse au nom de la compagnie)
+dans `lib/capacites.ts` : activés avec yego-api 0.30.0. Ne pas repasser `DEMANDES_REVERSEMENT`
+à `false` : l'API refuse désormais `POST /reversements` sans `moyen`.
+
 ## À compléter
 
 - Fil de notifications in-app (`GET /notifications`).
@@ -230,6 +258,24 @@ ouverte → en_cours → resolue / fermee, priorité, `GET /support/compteurs`).
 
 Tant que `MODULE_SUPPORT` vaut `false` (`lib/capacites.ts`), les pages affichent un
 message d'attente et n'appellent pas l'API.
+
+## Déploiement (Vercel)
+
+1. Le dépôt GitHub doit être à jour (branche `main`).
+2. Sur vercel.com : **Add New → Project** → importer `yego-dashboard`. Le framework Next.js est
+   détecté : garder les commandes par défaut (`npm run build`, Node ≥ 20.9).
+3. **Environment Variables** (Production) :
+   `NEXT_PUBLIC_API_URL = https://yego-api.onrender.com/api/v1` — URL complète, préfixe `/api/v1`
+   inclus (le client ne l'ajoute pas). Le build échoue volontairement si elle manque.
+   Variable `NEXT_PUBLIC_*` : elle est figée au build, toute modification impose un redéploiement.
+4. **Deploy**, puis ajouter l'URL obtenue (`https://<projet>.vercel.app`, et le domaine perso
+   éventuel) à `CORS_ORIGIN` de l'API sur Render — sans slash final. Sans cela, la connexion
+   échoue (« Failed to fetch »).
+
+Les déploiements *preview* ont une URL différente à chaque fois : ils sont refusés par CORS.
+Tester sur l'URL de production. Les jetons sont stockés en `localStorage` et envoyés en
+`Authorization: Bearer` : aucun cookie inter-domaines n'est nécessaire. L'URL de l'API est aussi
+autorisée dans la CSP (`connect-src`, cf. `next.config.js`).
 
 ## Sécurité
 

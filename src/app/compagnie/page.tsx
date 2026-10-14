@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CalendarClock, ClipboardList, Ticket, TrendingUp, Wallet, Users2, Gauge } from 'lucide-react';
+import { ArrowRight, Banknote, CalendarClock, ClipboardList, Ticket, TrendingUp, Wallet, Users2, Gauge } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import StatCard from '@/components/ui/StatCard';
@@ -10,8 +10,11 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { AreaChart, Sparkline, Donut, BarsH, Meter, compact } from '@/components/charts';
 import { dashboardApi } from '@/features/dashboard';
 import type { DashboardResume, DashboardTrajetClassement, DashboardSeriePoint } from '@/features/dashboard';
+import { reversementsApi } from '@/features/reversements';
+import type { SoldeCompagnie } from '@/features/reversements';
 import { useAuthGuard } from '@/lib/auth';
 import { COMPAGNIE_NAV } from '@/lib/nav';
+import { DEMANDES_REVERSEMENT, JEKO } from '@/lib/capacites';
 import { formatFcfa, formatPourcentage } from '@/lib/format';
 
 const JOURS = [14, 30] as const;
@@ -23,6 +26,7 @@ export default function CompagnieDashboard() {
   const [topTrajets, setTopTrajets] = useState<DashboardTrajetClassement[]>([]);
   const [jours, setJours] = useState<(typeof JOURS)[number]>(30);
   const [chargement, setChargement] = useState(true);
+  const [solde, setSolde] = useState<SoldeCompagnie | null>(null);
 
   const peutVoirStats = user?.role === 'company_admin';
 
@@ -30,6 +34,12 @@ export default function CompagnieDashboard() {
     if (!ready || !peutVoirStats) {
       setChargement(false);
       return;
+    }
+    if (JEKO && DEMANDES_REVERSEMENT) {
+      reversementsApi
+        .soldeCompagnie()
+        .then(setSolde)
+        .catch(() => setSolde(null));
     }
     Promise.all([
       dashboardApi.resume().then(setResume).catch(() => setResume(null)),
@@ -131,6 +141,29 @@ export default function CompagnieDashboard() {
           detail={occ ? `${occ.placesOccupees} / ${occ.placesTotales} places` : undefined}
         />
       </div>
+
+      {solde && (
+        <Link href="/compagnie/reversements" className="group mb-5 block">
+          <Card className="flex flex-col gap-3 p-5 transition-colors group-hover:border-accent sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Banknote className="h-5 w-5 text-accent" strokeWidth={1.75} />
+              <div>
+                <p className="text-xs font-medium text-ink-soft">Ventes en ligne à vous reverser</p>
+                <p className="text-lg font-semibold text-ink">
+                  {formatFcfa(solde.disponible.montantNet)}
+                  <span className="ml-2 text-xs font-normal text-ink-faint">
+                    disponible · {formatFcfa(solde.enAttente.montantNet)} en attente
+                  </span>
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-ink">
+              {solde.demandeEnAttente ? 'Demande en attente' : 'Voir les reversements'}
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+            </span>
+          </Card>
+        </Link>
+      )}
 
       <Card className="mb-5">
         <CardHeader

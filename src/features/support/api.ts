@@ -14,8 +14,8 @@ export type FiltresSupport = {
   q: string;
   statut: '' | StatutSupport;
   categorie: '' | CategorieSupport;
-  origine: '' | 'voyageur' | 'compagnie';
-  compagnieId: string; // admin uniquement
+  origine: '' | 'voyageur' | 'compagnie'; // admin ; gestionnaire avec SUPPORT_COMPAGNIE
+  compagnieId: string; // admin uniquement (ignoré sinon)
 };
 
 export const FILTRES_SUPPORT_DEFAUT: FiltresSupport = {

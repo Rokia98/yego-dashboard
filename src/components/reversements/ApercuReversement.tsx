@@ -1,9 +1,10 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { MOYENS_REVERSEMENT } from '@/features/reversements';
+import { estBloque, MOYENS_REVERSEMENT } from '@/features/reversements';
 import type { ApercuReversement as Apercu } from '@/features/reversements';
-import { formatFcfa } from '@/lib/format';
+import { formatDateHeure, formatFcfa } from '@/lib/format';
 import { formatTelephone } from '@/lib/telephone';
+import { DEMANDES_REVERSEMENT } from '@/lib/capacites';
 
 function Ligne({ label, valeur, fort = false }: { label: string; valeur: React.ReactNode; fort?: boolean }) {
   return (
@@ -18,14 +19,17 @@ function Ligne({ label, valeur, fort = false }: { label: string; valeur: React.R
 export default function ApercuReversement({
   apercu,
   titre = 'Prochain reversement',
+  actionBlocage,
   children,
 }: {
   apercu: Apercu;
   titre?: string;
+  /** Action proposée dans le bandeau de blocage (admin : « Confirmer le compte »). */
+  actionBlocage?: React.ReactNode;
   children?: React.ReactNode; // action (bouton admin)
 }) {
   const c = apercu.coordonnees;
-  const moyen = MOYENS_REVERSEMENT.find((m) => m.valeur === c.moyen)?.label ?? c.moyen;
+  const moyen = MOYENS_REVERSEMENT.find((m) => m.valeur === c?.moyen)?.label ?? c?.moyen;
   const pourcent = Number(apercu.commissionPourcent);
 
   return (
@@ -42,13 +46,26 @@ export default function ApercuReversement({
           valeur={`− ${formatFcfa(apercu.commission)}`}
         />
         <Ligne label="Net à reverser" valeur={formatFcfa(apercu.montantNet)} fort />
-        <Ligne
-          label="Bénéficiaire"
-          valeur={
-            c.telephone ? `${moyen} · ${formatTelephone(c.telephone)}` : <span className="text-danger">Non renseigné</span>
-          }
-        />
+        {DEMANDES_REVERSEMENT ? (
+          <Ligne label="Versement" valeur="Remis en main propre par Yègo" />
+        ) : (
+          <Ligne
+            label="Bénéficiaire"
+            valeur={
+              c?.telephone ? `${moyen} · ${formatTelephone(c.telephone)}` : <span className="text-danger">Non renseigné</span>
+            }
+          />
+        )}
       </div>
+      {!DEMANDES_REVERSEMENT && estBloque(apercu) && (
+        <div className="flex flex-col gap-2 border-t border-line-soft bg-warning-soft px-5 py-3 text-xs text-warning sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-1.5">
+            <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+            Compte modifié par la compagnie — reversement possible le {formatDateHeure(apercu.bloqueJusquA)}.
+          </p>
+          {actionBlocage}
+        </div>
+      )}
       {(apercu.plafondAtteint || apercu.reversementsEnCours > 0) && (
         <div className="space-y-1.5 border-t border-line-soft px-5 py-3 text-xs text-warning">
           {apercu.plafondAtteint && (
@@ -60,8 +77,8 @@ export default function ApercuReversement({
           {apercu.reversementsEnCours > 0 && (
             <p className="flex items-start gap-1.5">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-              {apercu.reversementsEnCours} reversement{apercu.reversementsEnCours > 1 ? 's' : ''} en cours chez
-              l’opérateur.
+              {apercu.reversementsEnCours} reversement{apercu.reversementsEnCours > 1 ? 's' : ''} en cours
+              {DEMANDES_REVERSEMENT ? ' de transfert vers Yègo.' : ' chez l’opérateur.'}
             </p>
           )}
         </div>

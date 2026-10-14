@@ -6,9 +6,14 @@ import {
   rafraichirAccessToken,
 } from './session';
 
+// Dupliqué de auth.ts (qui importe http.ts) pour éviter un import circulaire.
+const PATH_CHANGEMENT_MDP = '/changer-mot-de-passe';
+
 function redirigerVersConnexion() {
   effacerSession();
   if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+    // Rechargement complet voulu : repart d'un état mémoire vierge après la perte de session.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = '/';
   }
 }
@@ -54,6 +59,19 @@ async function avecAuth(path: string, construire: (token: string | null) => Prom
     throw new Error('Session expirée, veuillez vous reconnecter.');
   }
 
+  // API 0.29.0 : tant que le mot de passe temporaire n'est pas changé, toute
+  // route protégée répond 403 MOT_DE_PASSE_A_CHANGER (filet de sécurité si le
+  // claim pwTmp du jeton n'a pas déjà redirigé via useAuthGuard).
+  if (res.status === 403) {
+    const corps = await res.clone().json().catch(() => null);
+    if (corps?.code === 'MOT_DE_PASSE_A_CHANGER') {
+      if (typeof window !== 'undefined' && window.location.pathname !== PATH_CHANGEMENT_MDP) {
+        window.location.replace(`${PATH_CHANGEMENT_MDP}?obligatoire=1`);
+      }
+      throw new Error(messageErreur(corps));
+    }
+  }
+
   return res;
 }
 
@@ -69,6 +87,24 @@ export async function apiFetch<T = unknown>(path: string, options: RequestInit =
   }
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+/**
+ * Requête JSON d'une liste paginée dont le total hors pagination est dans
+ * l'en-tête X-Total-Count (null si absent ou non exposé par CORS).
+ */
+export async function apiFetchAvecTotal<T = unknown>(path: string): Promise<{ items: T; total: number | null }> {
+  const res = await avecAuth(path, (token) =>
+    fetch(`${API_URL}${path}`, { headers: enTetes(token, true) }),
+  );
+
+  if (!res.ok) {
+    const corps = await res.json().catch(() => null);
+    throw new Error(messageErreur(corps));
+  }
+  const brut = res.headers.get('X-Total-Count');
+  const total = brut != null && brut !== '' && Number.isFinite(Number(brut)) ? Number(brut) : null;
+  return { items: await res.json(), total };
 }
 
 /** Upload multipart (FormData) — pas de Content-Type forcé, le navigateur pose la boundary. */
