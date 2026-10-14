@@ -9,6 +9,8 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { Field, Input } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { ListePaginee } from '@/components/ui/Pagination';
+import Modal, { BoutonCreation, PiedModal } from '@/components/ui/Modal';
 import { agentsApi } from '@/features/agents';
 import type { Agent } from '@/features/agents';
 import { useAuthGuard } from '@/lib/auth';
@@ -28,6 +30,7 @@ export default function AgentsPage() {
   const [champs, setChamps] = useState(CHAMPS_VIDES);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
   const [mdpVisible, setMdpVisible] = useState(false);
   const [identifiants, setIdentifiants] = useState<Identifiants | null>(null);
@@ -61,12 +64,20 @@ export default function AgentsPage() {
       afficherIdentifiants({ nom: champs.nom, telephone: champs.telephone, motDePasse: champs.motDePasse, reinitialisation: false });
       setChamps(CHAMPS_VIDES);
       setMdpVisible(false);
+      setFormulaireOuvert(false);
       await charger();
     } catch (err) {
       setErreur(err instanceof Error ? err.message : "Erreur lors de la création de l'agent");
     } finally {
       setEnvoi(false);
     }
+  }
+
+  function fermerFormulaire() {
+    setFormulaireOuvert(false);
+    setErreur(null);
+    setChamps(CHAMPS_VIDES);
+    setMdpVisible(false);
   }
 
   function afficherIdentifiants(i: Identifiants) {
@@ -128,10 +139,11 @@ Mot de passe provisoire : ${identifiants.motDePasse}
     <DashboardShell nav={COMPAGNIE_NAV} title="Espace compagnie" userLabel={user?.telephone}>
       <PageHeader eyebrow="Espace opérateur" title="Agents guichet" subtitle="Le personnel autorisé à vendre au comptoir pour votre compagnie." />
 
-      <Card className="mb-6 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Ajouter un agent</h2>
+      <BoutonCreation label="Ajouter un agent" onClick={() => setFormulaireOuvert(true)} />
+
+      <Modal ouvert={formulaireOuvert} titre="Ajouter un agent" onFermer={envoi ? undefined : fermerFormulaire}>
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Nom">
               <Input type="text" required value={champs.nom} onChange={(e) => setChamps({ ...champs, nom: e.target.value })} />
             </Field>
@@ -186,11 +198,9 @@ Mot de passe provisoire : ${identifiants.motDePasse}
           <p className="mt-3 text-xs text-ink-faint">L’agent changera ce mot de passe provisoire à sa première connexion.</p>
           {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
 
-          <Button type="submit" disabled={envoi} className="mt-4">
-            {envoi ? 'Création...' : "Créer l'agent"}
-          </Button>
+          <PiedModal envoi={envoi} libelle="Créer l'agent" onAnnuler={fermerFormulaire} />
         </form>
-      </Card>
+      </Modal>
 
       {identifiants && (
         <Card className="mb-6 border-accent/40 p-5">
@@ -227,6 +237,8 @@ Mot de passe provisoire : ${identifiants.motDePasse}
         ) : agents.length === 0 ? (
           <TableMessage>Aucun agent enregistré.</TableMessage>
         ) : (
+          <ListePaginee items={agents}>
+            {(page) => (
           <Table minWidth="760px">
             <THead>
               <Th>Nom</Th>
@@ -236,7 +248,7 @@ Mot de passe provisoire : ${identifiants.motDePasse}
               <Th>Action</Th>
             </THead>
             <tbody>
-              {agents.map((a) => (
+              {page.map((a) => (
                 <Tr key={a.id}>
                   <Td strong>{a.nom}</Td>
                   <Td>{formatTelephone(a.telephone)}</Td>
@@ -266,6 +278,8 @@ Mot de passe provisoire : ${identifiants.motDePasse}
               ))}
             </tbody>
           </Table>
+            )}
+          </ListePaginee>
         )}
       </Card>
     </DashboardShell>

@@ -93,12 +93,16 @@ Sur mobile : barre supérieure + tiroir latéral. Navigation regroupée en secti
 
 ## Pagination
 
+Toutes les listes s'affichent **par pages de 10** (`TAILLE_PAGE`), avec en pied de
+tableau « 11–20 sur 45 » + Précédent / numéros / Suivant (`components/ui/Pagination`).
+
 L'API pagine par `skip`/`take` (défaut 10, plafond 100), renvoie un tableau nu
-sans total. `usePagedList(fetcher, resetKey, take)` gère `items` / `chargement` /
-`aSuite` / `chargerSuite` (bouton `LoadMore`) et déduit « il reste des pages »
-d'une page pleine. Appliqué aux listes réservations, départs, contrôles,
-remboursements et journal d'audit ; les listes bornées (agents, flotte, trajets,
-compagnies, abonnements) chargent 100 éléments d'un coup.
+sans total. `usePagedList(fetcher, resetKey, take)` lit les lignes par lots,
+expose `pageItems` + `pagination`, et lit la suite côté API quand on dépasse les
+pages chargées (« 45+ » tant que la fin n'est pas atteinte ; total exact via
+l'option `total`, ex. `X-Total-Count` des utilisateurs). Les listes complètes
+(agents, flotte, trajets, compagnies, abonnements) sont paginées côté client par
+`<ListePaginee items cle>`.
 
 Faute de total et de filtres serveur, les filtres statut/compagnie des réservations
 et les compteurs « affichés » portent **sur les lignes déjà chargées** (l'écran le

@@ -8,6 +8,8 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { Field, Input, Select } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { ListePaginee } from '@/components/ui/Pagination';
+import Modal, { BoutonCreation, PiedModal } from '@/components/ui/Modal';
 import { vehiculesApi, chauffeursApi } from '@/features/flotte';
 import type { Vehicule, Chauffeur } from '@/features/flotte';
 import { useAuthGuard } from '@/lib/auth';
@@ -38,6 +40,18 @@ export default function FlottePage() {
   const [envoiChauffeur, setEnvoiChauffeur] = useState(false);
 
   const peutGerer = user?.role === 'company_admin';
+  const [modale, setModale] = useState<'vehicule' | 'chauffeur' | null>(null);
+
+  function fermerVehicule() {
+    setModale(null);
+    setErreurVehicule(null);
+    setChampsVehicule(VEHICULE_VIDE);
+  }
+  function fermerChauffeur() {
+    setModale(null);
+    setErreurChauffeur(null);
+    setChampsChauffeur(CHAUFFEUR_VIDE);
+  }
 
   function chargerVehicules() {
     return vehiculesApi.list().then(setVehicules).catch(() => setVehicules([]));
@@ -63,6 +77,7 @@ export default function FlottePage() {
         capacite: Number(champsVehicule.capacite),
       });
       setChampsVehicule(VEHICULE_VIDE);
+      setModale(null);
       await chargerVehicules();
     } catch (err) {
       setErreurVehicule(err instanceof Error ? err.message : 'Erreur lors de la création du véhicule');
@@ -105,6 +120,7 @@ export default function FlottePage() {
         numeroPermis: champsChauffeur.numeroPermis || undefined,
       });
       setChampsChauffeur(CHAUFFEUR_VIDE);
+      setModale(null);
       await chargerChauffeurs();
     } catch (err) {
       setErreurChauffeur(err instanceof Error ? err.message : 'Erreur lors de la création du chauffeur');
@@ -129,11 +145,16 @@ export default function FlottePage() {
     <DashboardShell nav={COMPAGNIE_NAV} title="Espace compagnie" userLabel={user?.telephone}>
       <PageHeader eyebrow="Espace opérateur" title="Flotte" subtitle="Véhicules et chauffeurs disponibles pour vos départs." />
 
+      {peutGerer && <BoutonCreation label="Ajouter un véhicule" onClick={() => setModale('vehicule')} />}
+
       {peutGerer && (
-        <Card className="mb-6 p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ink">Ajouter un véhicule</h2>
+        <Modal
+          ouvert={modale === 'vehicule'}
+          titre="Ajouter un véhicule"
+          onFermer={envoiVehicule ? undefined : fermerVehicule}
+        >
           <form onSubmit={handleCreerVehicule}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Immatriculation">
                 <Input
                   type="text"
@@ -162,11 +183,9 @@ export default function FlottePage() {
               </Field>
             </div>
             {erreurVehicule && <p className="mt-3 text-sm text-danger">{erreurVehicule}</p>}
-            <Button type="submit" disabled={envoiVehicule} className="mt-4">
-              {envoiVehicule ? 'Création...' : 'Ajouter le véhicule'}
-            </Button>
+            <PiedModal envoi={envoiVehicule} libelle="Ajouter le véhicule" onAnnuler={fermerVehicule} />
           </form>
-        </Card>
+        </Modal>
       )}
 
       <Card className="mb-6">
@@ -176,6 +195,8 @@ export default function FlottePage() {
         ) : vehicules.length === 0 ? (
           <TableMessage>Aucun véhicule enregistré.</TableMessage>
         ) : (
+          <ListePaginee items={vehicules}>
+            {(page) => (
           <Table minWidth="640px">
             <THead>
               <Th>Immatriculation</Th>
@@ -185,7 +206,7 @@ export default function FlottePage() {
               {peutGerer && <Th>Action</Th>}
             </THead>
             <tbody>
-              {vehicules.map((v) => (
+              {page.map((v) => (
                 <Tr key={v.id}>
                   <Td strong>{v.immatriculation}</Td>
                   <Td>{v.typeVehicule || '—'}</Td>
@@ -216,14 +237,21 @@ export default function FlottePage() {
               ))}
             </tbody>
           </Table>
+            )}
+          </ListePaginee>
         )}
       </Card>
 
+      {peutGerer && <BoutonCreation label="Ajouter un chauffeur" onClick={() => setModale('chauffeur')} />}
+
       {peutGerer && (
-        <Card className="mb-6 p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ink">Ajouter un chauffeur</h2>
+        <Modal
+          ouvert={modale === 'chauffeur'}
+          titre="Ajouter un chauffeur"
+          onFermer={envoiChauffeur ? undefined : fermerChauffeur}
+        >
           <form onSubmit={handleCreerChauffeur}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Nom">
                 <Input
                   type="text"
@@ -251,11 +279,9 @@ export default function FlottePage() {
               </Field>
             </div>
             {erreurChauffeur && <p className="mt-3 text-sm text-danger">{erreurChauffeur}</p>}
-            <Button type="submit" disabled={envoiChauffeur} className="mt-4">
-              {envoiChauffeur ? 'Création...' : 'Ajouter le chauffeur'}
-            </Button>
+            <PiedModal envoi={envoiChauffeur} libelle="Ajouter le chauffeur" onAnnuler={fermerChauffeur} />
           </form>
-        </Card>
+        </Modal>
       )}
 
       <Card>
@@ -265,6 +291,8 @@ export default function FlottePage() {
         ) : chauffeurs.length === 0 ? (
           <TableMessage>Aucun chauffeur enregistré.</TableMessage>
         ) : (
+          <ListePaginee items={chauffeurs}>
+            {(page) => (
           <Table minWidth="560px">
             <THead>
               <Th>Nom</Th>
@@ -273,7 +301,7 @@ export default function FlottePage() {
               {peutGerer && <Th>Action</Th>}
             </THead>
             <tbody>
-              {chauffeurs.map((c) => (
+              {page.map((c) => (
                 <Tr key={c.id}>
                   <Td strong>{c.nom}</Td>
                   <Td>{c.telephone ? formatTelephone(c.telephone) : '—'}</Td>
@@ -289,6 +317,8 @@ export default function FlottePage() {
               ))}
             </tbody>
           </Table>
+            )}
+          </ListePaginee>
         )}
       </Card>
     </DashboardShell>

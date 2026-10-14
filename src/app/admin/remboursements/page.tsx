@@ -15,7 +15,7 @@ import {
   type FiltreStatutRemboursement,
 } from '@/components/remboursements/ActionsRemboursement';
 import StatCard from '@/components/ui/StatCard';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import { remboursementsApi, nomBeneficiaire } from '@/features/remboursements';
 import type { ModeRemboursement, Remboursement } from '@/features/remboursements';
 import { useAuthGuard } from '@/lib/auth';
@@ -129,7 +129,7 @@ export default function AdminRemboursementsPage() {
                 <Th>Action</Th>
               </THead>
               <tbody>
-                {liste.items.map((r) => (
+                {liste.pageItems.map((r) => (
                   <Tr key={r.id}>
                     <Td strong>{r.id}</Td>
                     <Td>#{r.reservationId}</Td>
@@ -147,12 +147,7 @@ export default function AdminRemboursementsPage() {
                 ))}
               </tbody>
             </Table>
-            <LoadMore
-              aSuite={liste.aSuite}
-              chargement={liste.chargementSuite}
-              onClick={liste.chargerSuite}
-              nbCharges={liste.items.length}
-            />
+            <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

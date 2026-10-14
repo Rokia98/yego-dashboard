@@ -5,7 +5,7 @@ import { LifeBuoy, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import { FiltresBar, FiltreRecherche, FiltreSegments, FiltreSelect } from '@/components/ui/Filtres';
 import FilSupport from './FilSupport';
 import NouvelleDemande from './NouvelleDemande';
@@ -176,7 +176,7 @@ export default function BoiteSupport({ espace, user }: Props) {
           ) : (
             <>
               <ul className="divide-y divide-line-soft">
-                {liste.items.map((d) => {
+                {liste.pageItems.map((d) => {
                   const actif = d.id === selection;
                   return (
                     <li key={d.id}>
@@ -222,7 +222,7 @@ export default function BoiteSupport({ espace, user }: Props) {
                   );
                 })}
               </ul>
-              <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+              <Pagination pagination={liste.pagination} />
             </>
           )}
         </Card>

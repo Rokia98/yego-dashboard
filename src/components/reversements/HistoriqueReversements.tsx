@@ -7,7 +7,7 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { FiltresBar, FiltreSegments, FiltreSelect } from '@/components/ui/Filtres';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import {
   estARemettre,
   reversementsApi,
@@ -190,7 +190,7 @@ export default function HistoriqueReversements({
                 <Th>{''}</Th>
               </THead>
               <tbody>
-                {liste.items.map((r) => (
+                {liste.pageItems.map((r) => (
                   <Fragment key={r.id}>
                     <Tr>
                       <Td className="whitespace-nowrap">
@@ -258,7 +258,7 @@ export default function HistoriqueReversements({
                 ))}
               </tbody>
             </Table>
-            <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+            <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

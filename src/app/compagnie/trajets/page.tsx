@@ -8,6 +8,8 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { Field, Input, Select } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { ListePaginee } from '@/components/ui/Pagination';
+import Modal, { BoutonCreation, PiedModal } from '@/components/ui/Modal';
 import { trajetsApi } from '@/features/trajets';
 import type { Trajet } from '@/features/trajets';
 import { villesApi } from '@/features/villes';
@@ -43,6 +45,7 @@ export default function TrajetsPage() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const filtres = useFiltres<Filtres>(FILTRES_DEFAUT, 'q');
 
   const peutGerer = user?.role === 'company_admin';
@@ -85,12 +88,19 @@ export default function TrajetsPage() {
         joursRecurrence: champs.joursRecurrence || undefined,
       });
       setChamps(CHAMPS_VIDES);
+      setFormulaireOuvert(false);
       await chargerTrajets(user.compagnieId);
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Erreur lors de la création du trajet');
     } finally {
       setEnvoi(false);
     }
+  }
+
+  function fermerFormulaire() {
+    setFormulaireOuvert(false);
+    setErreur(null);
+    setChamps(CHAMPS_VIDES);
   }
 
   async function handleToggleStatut(t: Trajet) {
@@ -134,11 +144,12 @@ export default function TrajetsPage() {
     <DashboardShell nav={COMPAGNIE_NAV} title="Espace compagnie" userLabel={user?.telephone}>
       <PageHeader eyebrow="Espace opérateur" title="Trajets" subtitle="Les itinéraires que votre compagnie propose à la vente." />
 
+      {peutGerer && <BoutonCreation label="Créer un trajet" onClick={() => setFormulaireOuvert(true)} />}
+
       {peutGerer && (
-        <Card className="mb-6 p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ink">Créer un trajet</h2>
+        <Modal ouvert={formulaireOuvert} titre="Créer un trajet" onFermer={envoi ? undefined : fermerFormulaire}>
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Ville de départ">
                 <Select required value={champs.villeDepartId} onChange={(e) => setChamps({ ...champs, villeDepartId: e.target.value })}>
                   <option value="">Sélectionner...</option>
@@ -176,11 +187,9 @@ export default function TrajetsPage() {
 
             {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
 
-            <Button type="submit" disabled={envoi} className="mt-4">
-              {envoi ? 'Création...' : 'Créer le trajet'}
-            </Button>
+            <PiedModal envoi={envoi} libelle="Créer le trajet" onAnnuler={fermerFormulaire} />
           </form>
-        </Card>
+        </Modal>
       )}
 
       <FiltresBar nbActifs={filtres.nbActifs} onReinitialiser={filtres.reinitialiser}>
@@ -211,6 +220,8 @@ export default function TrajetsPage() {
         ) : trajetsFiltres.length === 0 ? (
           <TableMessage>Aucun trajet ne correspond à ces filtres.</TableMessage>
         ) : (
+          <ListePaginee items={trajetsFiltres} cle={filtres.cle}>
+            {(page) => (
           <Table minWidth="820px">
             <THead>
               <Th>Départ</Th>
@@ -222,7 +233,7 @@ export default function TrajetsPage() {
               {peutGerer && <Th>Action</Th>}
             </THead>
             <tbody>
-              {trajetsFiltres.map((t) => (
+              {page.map((t) => (
                 <Tr key={t.id}>
                   <Td strong>{t.villeDepart.nom}</Td>
                   <Td>{t.villeArrivee.nom}</Td>
@@ -250,6 +261,8 @@ export default function TrajetsPage() {
               ))}
             </tbody>
           </Table>
+            )}
+          </ListePaginee>
         )}
       </Card>
     </DashboardShell>

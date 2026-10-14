@@ -8,6 +8,7 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
 import StatCard from '@/components/ui/StatCard';
 import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import { FiltresBar, FiltrePeriode, FiltreSegments } from '@/components/ui/Filtres';
 import { ticketsApi } from '@/features/tickets';
 import type { BilletScanne } from '@/features/tickets';
@@ -139,7 +140,7 @@ export default function ControlesPage() {
                 <Th>Résultat</Th>
               </THead>
               <tbody>
-                {liste.items.map((s, i) => {
+                {liste.pageItems.map((s, i) => {
                   const t = s.reservation?.depart.trajet;
                   return (
                     <Tr key={`${s.ticketId ?? 'x'}-${s.date}-${i}`}>
@@ -157,7 +158,7 @@ export default function ControlesPage() {
                 })}
               </tbody>
             </Table>
-            <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+            <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

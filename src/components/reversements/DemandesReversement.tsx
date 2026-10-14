@@ -6,7 +6,7 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { FiltresBar, FiltreSegments, FiltreSelect } from '@/components/ui/Filtres';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import { Select } from '@/components/ui/Field';
 import {
   reversementsApi,
@@ -161,7 +161,7 @@ export default function DemandesReversement({
                 <Th>{''}</Th>
               </THead>
               <tbody>
-                {liste.items.map((d) => (
+                {liste.pageItems.map((d) => (
                   <Tr key={d.id}>
                     <Td className="whitespace-nowrap">
                       {formatDateHeure(d.dateDemande)}
@@ -221,12 +221,7 @@ export default function DemandesReversement({
                 ))}
               </tbody>
             </Table>
-            <LoadMore
-              aSuite={liste.aSuite}
-              chargement={liste.chargementSuite}
-              onClick={liste.chargerSuite}
-              nbCharges={liste.items.length}
-            />
+            <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

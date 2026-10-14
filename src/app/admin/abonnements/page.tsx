@@ -8,6 +8,8 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { Field, Input, Select } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { ListePaginee } from '@/components/ui/Pagination';
+import Modal, { BoutonCreation, PiedModal } from '@/components/ui/Modal';
 import { abonnementsApi } from '@/features/abonnements';
 import type { Abonnement } from '@/features/abonnements';
 import { compagniesApi } from '@/features/compagnies';
@@ -44,6 +46,7 @@ export default function AdminAbonnementsPage() {
   const [champs, setChamps] = useState(CHAMPS_VIDES);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
 
   const [renouvellementId, setRenouvellementId] = useState<number | null>(null);
   const [nouvelleDateFin, setNouvelleDateFin] = useState('');
@@ -79,12 +82,19 @@ export default function AdminAbonnementsPage() {
         dateFin: champs.dateFin,
       });
       setChamps(CHAMPS_VIDES);
+      setFormulaireOuvert(false);
       await charger();
     } catch (err) {
       setErreur(err instanceof Error ? err.message : "Erreur lors de la création de l'abonnement");
     } finally {
       setEnvoi(false);
     }
+  }
+
+  function fermerFormulaire() {
+    setFormulaireOuvert(false);
+    setErreur(null);
+    setChamps(CHAMPS_VIDES);
   }
 
   function ouvrirRenouvellement(a: Abonnement) {
@@ -128,10 +138,11 @@ export default function AdminAbonnementsPage() {
         subtitle="Créez et renouvelez les abonnements des compagnies partenaires."
       />
 
-      <Card className="mb-6 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Créer un abonnement</h2>
+      <BoutonCreation label="Créer un abonnement" onClick={() => setFormulaireOuvert(true)} />
+
+      <Modal ouvert={formulaireOuvert} titre="Créer un abonnement" onFermer={envoi ? undefined : fermerFormulaire}>
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Compagnie">
               <Select required value={champs.compagnieId} onChange={(e) => setChamps({ ...champs, compagnieId: e.target.value })}>
                 <option value="">Sélectionner...</option>
@@ -178,11 +189,9 @@ export default function AdminAbonnementsPage() {
 
           {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
 
-          <Button type="submit" disabled={envoi} className="mt-4">
-            {envoi ? 'Création...' : "Créer l'abonnement"}
-          </Button>
+          <PiedModal envoi={envoi} libelle="Créer l'abonnement" onAnnuler={fermerFormulaire} />
         </form>
-      </Card>
+      </Modal>
 
       <FiltresBar nbActifs={filtres.nbActifs} onReinitialiser={filtres.reinitialiser}>
         <FiltreRecherche
@@ -213,6 +222,8 @@ export default function AdminAbonnementsPage() {
         ) : abonnementsFiltres.length === 0 ? (
           <TableMessage>Aucun abonnement ne correspond à ces filtres.</TableMessage>
         ) : (
+          <ListePaginee items={abonnementsFiltres} cle={filtres.cle}>
+            {(page) => (
           <Table minWidth="820px">
             <THead>
               <Th>Compagnie</Th>
@@ -223,7 +234,7 @@ export default function AdminAbonnementsPage() {
               <Th>Action</Th>
             </THead>
             <tbody>
-              {abonnementsFiltres.map((a) => (
+              {page.map((a) => (
                 <Tr key={a.id}>
                   <Td strong>{a.compagnie?.nom}</Td>
                   <Td>{a.plan}</Td>
@@ -268,6 +279,8 @@ export default function AdminAbonnementsPage() {
               ))}
             </tbody>
           </Table>
+            )}
+          </ListePaginee>
         )}
       </Card>
     </DashboardShell>

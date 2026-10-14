@@ -7,6 +7,7 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import {
   FiltresBar,
   FiltrePeriode,
@@ -279,7 +280,7 @@ export default function ListeReservations({ espace }: Props) {
                 <Th>Action</Th>
               </THead>
               <tbody>
-                {liste.items.map((r) => {
+                {liste.pageItems.map((r) => {
                   const tel = r.utilisateur?.telephone ?? r.passagerTelephone;
                   const paye = r.paiement?.statut === 'paye';
                   return (
@@ -353,7 +354,7 @@ export default function ListeReservations({ espace }: Props) {
                 })}
               </tbody>
             </Table>
-            <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+            <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

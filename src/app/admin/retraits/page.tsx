@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { HandCoins, Landmark, Lock, Wallet } from 'lucide-react';
+import { HandCoins, Landmark, Lock, Plus, Wallet } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import StatCard from '@/components/ui/StatCard';
@@ -11,8 +11,9 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { FiltresBar, FiltreSegments } from '@/components/ui/Filtres';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import BientotDisponible from '@/components/ui/BientotDisponible';
+import Modal, { PiedModal } from '@/components/ui/Modal';
 import {
   retraitsApi,
   LIBELLE_STATUT_REVERSEMENT,
@@ -67,6 +68,7 @@ export default function AdminRetraitsPage() {
   const [moyen, setMoyen] = useState<MoyenRetrait>('wave');
   const [motDePasse, setMotDePasse] = useState('');
   const [envoi, setEnvoi] = useState(false);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [erreurForm, setErreurForm] = useState<string | null>(null);
   const [cleHistorique, setCleHistorique] = useState(0);
 
@@ -96,6 +98,13 @@ export default function AdminRetraitsPage() {
   const retirable = apercu ? Number(apercu.retirable) : 0;
   const plafond = Math.min(retirable, RETRAIT_MAX_FCFA);
 
+  function fermerFormulaire() {
+    setFormulaireOuvert(false);
+    setErreurForm(null);
+    setMontant('');
+    setMotDePasse('');
+  }
+
   async function retirer(e: React.FormEvent) {
     e.preventDefault();
     setErreurForm(null);
@@ -111,6 +120,7 @@ export default function AdminRetraitsPage() {
       const r = await retraitsApi.creer({ montant: m, moyen, motDePasse });
       setMontant('');
       setMotDePasse('');
+      setFormulaireOuvert(false);
       alert(
         r.statut === 'effectue'
           ? `Retrait #${r.id} effectué (${formatFcfa(r.montant)}).`
@@ -172,7 +182,22 @@ export default function AdminRetraitsPage() {
             <StatCard label="Déjà retiré" value={v(apercu?.dejaRetire)} icon={Landmark} detail="Cumul des retraits effectués" />
           </div>
 
-          <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="mb-4 flex flex-col items-end gap-1">
+            <Button onClick={() => setFormulaireOuvert(true)} disabled={formulaireBloque}>
+              <Plus className="h-4 w-4" strokeWidth={2} /> Nouveau retrait
+            </Button>
+            {apercu && formulaireBloque && (
+              <p className="text-xs text-ink-faint">
+                {!apercu.beneficiaire
+                  ? 'Numéro de retrait Yègo non configuré sur l’API (RETRAIT_YEGO_TELEPHONE).'
+                  : retraitEnCours
+                    ? 'Un retrait est déjà en cours : attendez son résultat.'
+                    : `Rien à retirer (minimum ${formatFcfa(RETRAIT_MIN_FCFA)}).`}
+              </p>
+            )}
+          </div>
+
+          <div className="mb-6">
             <Card>
               <CardHeader
                 title="Détail"
@@ -198,21 +223,20 @@ export default function AdminRetraitsPage() {
               </div>
             </Card>
 
-            <Card>
-              <CardHeader
-                title="Nouveau retrait"
-                subtitle={
-                  apercu?.beneficiaire
-                    ? `Vers le numéro Yègo ${formatTelephone(apercu.beneficiaire)} (fixé côté serveur).`
-                    : 'Numéro de retrait Yègo fixé côté serveur.'
-                }
-              />
-              {apercu && !apercu.beneficiaire ? (
-                <p className="p-5 text-sm text-danger">
-                  Numéro de retrait Yègo non configuré sur l’API (variable RETRAIT_YEGO_TELEPHONE).
-                </p>
-              ) : (
-                <form onSubmit={retirer} className="space-y-4 p-5">
+          </div>
+
+          <Modal
+            ouvert={formulaireOuvert}
+            titre="Nouveau retrait"
+            sousTitre={
+              apercu?.beneficiaire
+                ? `Vers le numéro Yègo ${formatTelephone(apercu.beneficiaire)} (fixé côté serveur).`
+                : 'Numéro de retrait Yègo fixé côté serveur.'
+            }
+            onFermer={envoi ? undefined : fermerFormulaire}
+            largeur="max-w-lg"
+          >
+                <form onSubmit={retirer} className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field label={`Montant (max ${formatFcfa(plafond)})`}>
                       <Input
@@ -242,21 +266,15 @@ export default function AdminRetraitsPage() {
                       disabled={formulaireBloque}
                     />
                   </Field>
-                  <Button type="submit" disabled={envoi || formulaireBloque} className="w-full">
-                    {envoi ? 'Transfert en cours…' : 'Retirer'}
-                  </Button>
-                  {(erreurForm || (apercu && formulaireBloque)) && (
-                    <p className={`text-xs ${erreurForm ? 'text-danger' : 'text-ink-faint'}`}>
-                      {erreurForm ??
-                        (retraitEnCours
-                          ? 'Un retrait est déjà en cours : attendez son résultat.'
-                          : `Rien à retirer (minimum ${formatFcfa(RETRAIT_MIN_FCFA)}).`)}
-                    </p>
-                  )}
+                  {erreurForm && <p className="text-sm text-danger">{erreurForm}</p>}
+                  <PiedModal
+                    envoi={envoi}
+                    libelle="Retirer"
+                    libelleEnvoi="Transfert en cours…"
+                    onAnnuler={fermerFormulaire}
+                  />
                 </form>
-              )}
-            </Card>
-          </div>
+          </Modal>
 
           <FiltresBar nbActifs={filtres.nbActifs} onReinitialiser={filtres.reinitialiser}>
             <FiltreSegments
@@ -286,7 +304,7 @@ export default function AdminRetraitsPage() {
                     <Th>Statut</Th>
                   </THead>
                   <tbody>
-                    {liste.items.map((r) => (
+                    {liste.pageItems.map((r) => (
                       <Tr key={r.id}>
                         <Td className="whitespace-nowrap">
                           {formatDateHeure(r.dateCreation)}
@@ -312,7 +330,7 @@ export default function AdminRetraitsPage() {
                     ))}
                   </tbody>
                 </Table>
-                <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+                <Pagination pagination={liste.pagination} />
               </>
             )}
           </Card>

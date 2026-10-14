@@ -4,6 +4,63 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Fetcher<T> = (params: { take: number; skip: number }) => Promise<T[]>;
 
+/** Nombre de lignes affichées par page dans toutes les listes. */
+export const TAILLE_PAGE = 10;
+
+/** État de la pagination « 1 2 3 … Suivant » affichée en pied de tableau. */
+export type EtatPagination = {
+  page: number; // 0-indexée
+  nbPages: number; // pages connues (au moins 1)
+  /** D'autres lignes existent au-delà des pages connues (API sans total). */
+  plus: boolean;
+  chargement: boolean;
+  /** Lignes connues (ou total exact quand l'API le fournit). */
+  total: number;
+  totalExact: boolean;
+  premier: number; // index 1-based de la 1re ligne affichée
+  dernier: number;
+  allerA: (page: number) => void;
+};
+
+function etatPagination(
+  page: number,
+  nbLignes: number,
+  plus: boolean,
+  chargement: boolean,
+  allerA: (p: number) => void,
+  totalExact?: number | null,
+): EtatPagination {
+  const total = totalExact ?? nbLignes;
+  const nbPages = Math.max(1, Math.ceil((totalExact ?? nbLignes) / TAILLE_PAGE));
+  return {
+    page,
+    nbPages,
+    plus: totalExact != null ? false : plus,
+    chargement,
+    total,
+    totalExact: totalExact != null || !plus,
+    premier: nbLignes === 0 ? 0 : page * TAILLE_PAGE + 1,
+    dernier: Math.min((page + 1) * TAILLE_PAGE, nbLignes),
+    allerA,
+  };
+}
+
+/** Pagination côté client d'une liste complète déjà chargée. `cle` change → retour page 1. */
+export function usePaginationLocale<T>(items: T[], cle: unknown = '') {
+  const [page, setPage] = useState(0);
+  const [clePrecedente, setClePrecedente] = useState(cle);
+  if (cle !== clePrecedente) {
+    setClePrecedente(cle);
+    setPage(0);
+  }
+  const nbPages = Math.max(1, Math.ceil(items.length / TAILLE_PAGE));
+  const p = Math.min(page, nbPages - 1);
+  return {
+    pageItems: items.slice(p * TAILLE_PAGE, (p + 1) * TAILLE_PAGE),
+    pagination: etatPagination(p, items.length, false, false, (n) => setPage(Math.max(0, Math.min(n, nbPages - 1)))),
+  };
+}
+
 export type PagedList<T> = {
   items: T[];
   chargement: boolean; // premier chargement
@@ -16,6 +73,9 @@ export type PagedList<T> = {
   recharger: () => void;
   fusionner: (predicate: (t: T) => boolean, valeur: T) => void;
   retirer: (predicate: (t: T) => boolean) => void;
+  /** Lignes de la page courante (TAILLE_PAGE). */
+  pageItems: T[];
+  pagination: EtatPagination;
 };
 
 export type OptionsPagedList<T> = {
@@ -34,12 +94,16 @@ export type OptionsPagedList<T> = {
   /** Taille des pages lues côté API quand un filtre local est actif (≤ 100). */
   tailleSource?: number;
   maxPagesParLot?: number;
+  /** Total exact hors pagination quand l'API le fournit (ex. X-Total-Count). */
+  total?: number | null;
 };
 
 /**
- * Liste paginée par "charger plus" : l'API ne renvoie ni total ni enveloppe,
- * on déduit `aSuite` d'une page source pleine. `resetKey` : quand il change,
- * on repart de skip 0 (filtres modifiés).
+ * Liste paginée : l'API ne renvoie ni total ni enveloppe, on déduit `aSuite`
+ * d'une page source pleine. Affichage par pages de TAILLE_PAGE (`pageItems`,
+ * `pagination` → composant Pagination) ; aller au-delà des lignes chargées lit
+ * la suite côté API. `resetKey` : quand il change, on repart de skip 0 et de
+ * la page 1 (filtres modifiés).
  */
 export function usePagedList<T>(
   fetcher: Fetcher<T>,
@@ -47,6 +111,7 @@ export function usePagedList<T>(
   take = 10,
   options: OptionsPagedList<T> = {},
 ): PagedList<T> {
+  const totalExact = options.total;
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
   const optionsRef = useRef(options);
@@ -58,6 +123,9 @@ export function usePagedList<T>(
   const [aSuite, setASuite] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [lues, setLues] = useState(0);
+  const [page, setPage] = useState(0);
+  // Page demandée au-delà des lignes chargées : atteinte une fois la suite lue.
+  const [pageVoulue, setPageVoulue] = useState<number | null>(null);
 
   // Position dans la source (API), distincte de items.length dès qu'un filtre
   // local écarte des lignes.
@@ -72,6 +140,8 @@ export function usePagedList<T>(
       const gen = remplacer ? ++generation.current : generation.current;
       if (remplacer) {
         skipSource.current = 0;
+        setPage(0);
+        setPageVoulue(null);
         setChargement(true);
       } else {
         setChargementSuite(true);
@@ -126,6 +196,34 @@ export function usePagedList<T>(
     });
   }, [charger, aSuite]);
 
+  // Suite arrivée (ou source épuisée) : on se place sur la page demandée.
+  const nbPagesChargees = Math.max(1, Math.ceil(items.length / TAILLE_PAGE));
+  if (pageVoulue != null && !chargementSuite && (pageVoulue < nbPagesChargees || !aSuite)) {
+    setPage(Math.min(pageVoulue, nbPagesChargees - 1));
+    setPageVoulue(null);
+  }
+
+  // Saut de plusieurs pages (total connu) : on lit la suite jusqu'à l'atteindre.
+  useEffect(() => {
+    if (pageVoulue != null && !chargementSuite && aSuite && pageVoulue >= nbPagesChargees) chargerSuite();
+  }, [pageVoulue, chargementSuite, aSuite, nbPagesChargees, chargerSuite]);
+
+  const allerA = useCallback(
+    (p: number) => {
+      if (p < 0) return;
+      if (p < nbPagesChargees) {
+        setPage(p);
+      } else if (aSuite) {
+        setPageVoulue(p);
+        chargerSuite();
+      }
+    },
+    [nbPagesChargees, aSuite, chargerSuite],
+  );
+
+  // Une ligne retirée peut vider la dernière page : on reste dans les bornes.
+  const pageCourante = Math.min(page, nbPagesChargees - 1);
+
   return {
     items,
     chargement,
@@ -137,5 +235,7 @@ export function usePagedList<T>(
     recharger: () => charger(true),
     fusionner: (predicate, valeur) => setItems((prev) => prev.map((t) => (predicate(t) ? valeur : t))),
     retirer: (predicate) => setItems((prev) => prev.filter((t) => !predicate(t))),
+    pageItems: items.slice(pageCourante * TAILLE_PAGE, (pageCourante + 1) * TAILLE_PAGE),
+    pagination: etatPagination(pageCourante, items.length, aSuite, chargementSuite, allerA, totalExact),
   };
 }

@@ -5,7 +5,7 @@ import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import { FiltresBar, FiltreSelect } from '@/components/ui/Filtres';
 import { auditApi, ACTIONS_AUDIT, ENTITES_AUDIT, libelleAction } from '@/features/audit';
 import type { AuditLog } from '@/features/audit';
@@ -84,7 +84,7 @@ export default function AuditPage() {
                 <Th>Détails</Th>
               </THead>
               <tbody>
-                {liste.items.map((l) => (
+                {liste.pageItems.map((l) => (
                   <Tr key={l.id}>
                     <Td strong>{formatDateHeure(l.dateCreation)}</Td>
                     <Td>{libelleAction(l.action)}</Td>
@@ -111,7 +111,7 @@ export default function AuditPage() {
                 ))}
               </tbody>
             </Table>
-            <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+            <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

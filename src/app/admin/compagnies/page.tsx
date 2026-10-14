@@ -10,6 +10,7 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { Field, Input } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { ListePaginee } from '@/components/ui/Pagination';
 import DocumentsPanel from '@/components/documents/DocumentsPanel';
 import CompteGestionnaire from '@/components/compagnies/CompteGestionnaire';
 import Modal from '@/components/ui/Modal';
@@ -320,6 +321,8 @@ export default function AdminCompagniesPage() {
         ) : compagniesFiltrees.length === 0 ? (
           <TableMessage>Aucune compagnie ne correspond à ces filtres.</TableMessage>
         ) : (
+          <ListePaginee items={compagniesFiltrees} cle={filtres.cle}>
+            {(page) => (
           <Table minWidth="880px">
             <THead>
               <Th>Compagnie</Th>
@@ -330,7 +333,7 @@ export default function AdminCompagniesPage() {
               <Th>Action</Th>
             </THead>
             <tbody>
-              {compagniesFiltrees.map((c) => (
+              {page.map((c) => (
                 <Fragment key={c.id}>
                 <Tr>
                   {edite === c.id ? (
@@ -434,6 +437,8 @@ export default function AdminCompagniesPage() {
               ))}
             </tbody>
           </Table>
+            )}
+          </ListePaginee>
         )}
       </Card>
     </DashboardShell>

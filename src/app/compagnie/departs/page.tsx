@@ -11,6 +11,8 @@ import { Field, Input, Select } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
+import Modal, { BoutonCreation, PiedModal } from '@/components/ui/Modal';
 import {
   departsApi,
   FILTRES_DEPARTS_DEFAUT,
@@ -56,6 +58,7 @@ export default function DepartsPage() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const compagnieId = user?.compagnieId ?? null;
   // depart:manage (planifier, modifier, annuler) : gestionnaire seulement depuis l'API 0.29.0 ;
   // les agents gardent depart:operer (démarrer, signaler un retard).
@@ -104,12 +107,19 @@ export default function DepartsPage() {
         chauffeurId: champs.chauffeurId ? Number(champs.chauffeurId) : undefined,
       });
       setChamps(CHAMPS_VIDES);
+      setFormulaireOuvert(false);
       liste.recharger();
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Erreur lors de la création du départ');
     } finally {
       setEnvoi(false);
     }
+  }
+
+  function fermerFormulaire() {
+    setFormulaireOuvert(false);
+    setErreur(null);
+    setChamps(CHAMPS_VIDES);
   }
 
   async function handleAnnuler(id: number) {
@@ -181,11 +191,12 @@ export default function DepartsPage() {
         }
       />
 
+      {gestionnaire && <BoutonCreation label="Planifier un départ" onClick={() => setFormulaireOuvert(true)} />}
+
       {gestionnaire && (
-        <Card className="mb-6 p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ink">Planifier un départ</h2>
+        <Modal ouvert={formulaireOuvert} titre="Planifier un départ" onFermer={envoi ? undefined : fermerFormulaire}>
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Trajet">
                 <Select required value={champs.trajetId} onChange={(e) => setChamps({ ...champs, trajetId: e.target.value })}>
                   <option value="">Sélectionner...</option>
@@ -230,11 +241,9 @@ export default function DepartsPage() {
 
             {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
 
-            <Button type="submit" disabled={envoi} className="mt-4">
-              {envoi ? 'Création...' : 'Planifier le départ'}
-            </Button>
+            <PiedModal envoi={envoi} libelle="Planifier le départ" onAnnuler={fermerFormulaire} />
           </form>
-        </Card>
+        </Modal>
       )}
 
       <FiltresBar
@@ -292,7 +301,7 @@ export default function DepartsPage() {
               <Th>Action</Th>
             </THead>
             <tbody>
-              {liste.items.map((d) => (
+              {liste.pageItems.map((d) => (
                 <Tr key={d.id}>
                   <Td strong>{d.trajet.villeDepart.nom} → {d.trajet.villeArrivee.nom}</Td>
                   <Td>{formatDate(d.dateDepart)}</Td>
@@ -332,12 +341,7 @@ export default function DepartsPage() {
               ))}
             </tbody>
           </Table>
-          <LoadMore
-            aSuite={liste.aSuite}
-            chargement={liste.chargementSuite}
-            onClick={liste.chargerSuite}
-            nbCharges={liste.items.length}
-          />
+          <Pagination pagination={liste.pagination} />
           </>
         )}
       </Card>

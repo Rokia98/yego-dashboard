@@ -1,7 +1,43 @@
 'use client';
 
 import { useEffect, useId } from 'react';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
+import Button from './Button';
+
+/** Bouton d'ouverture d'un formulaire de création, aligné à droite au-dessus d'une liste. */
+export function BoutonCreation({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <div className="mb-4 flex justify-end">
+      <Button onClick={onClick}>
+        <Plus className="h-4 w-4" strokeWidth={2} /> {label}
+      </Button>
+    </div>
+  );
+}
+
+/** Pied d'un formulaire en modale : Annuler + bouton d'envoi. */
+export function PiedModal({
+  envoi,
+  libelle,
+  libelleEnvoi = 'Création…',
+  onAnnuler,
+}: {
+  envoi: boolean;
+  libelle: string;
+  libelleEnvoi?: string;
+  onAnnuler: () => void;
+}) {
+  return (
+    <div className="mt-5 flex justify-end gap-2 border-t border-line-soft pt-4">
+      <Button variant="ghost" onClick={onAnnuler} disabled={envoi}>
+        Annuler
+      </Button>
+      <Button type="submit" disabled={envoi}>
+        {envoi ? libelleEnvoi : libelle}
+      </Button>
+    </div>
+  );
+}
 
 /**
  * Fenêtre modale centrée : fond assombri, fermeture par Échap, clic à

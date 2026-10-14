@@ -10,7 +10,7 @@ import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
 import { FiltresBar, FiltreRecherche, FiltreSegments, FiltreSelect } from '@/components/ui/Filtres';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import LoadMore from '@/components/ui/LoadMore';
+import Pagination from '@/components/ui/Pagination';
 import BientotDisponible from '@/components/ui/BientotDisponible';
 import { utilisateursApi, LIBELLE_ROLE, ROLES, ROLES_LIES_COMPAGNIE } from '@/features/utilisateurs';
 import type { Utilisateur } from '@/features/utilisateurs';
@@ -138,7 +138,7 @@ export default function AdminUtilisateursPage() {
     },
     [q, role, compagnieId, actif],
   );
-  const liste = usePagedList<Utilisateur>(fetcher, ready && LISTE_UTILISATEURS ? filtres.cle : 'wait', 20);
+  const liste = usePagedList<Utilisateur>(fetcher, ready && LISTE_UTILISATEURS ? filtres.cle : 'wait', 20, { total });
 
   const optionsCompagnies = useMemo(
     () => compagnies.map((c) => ({ valeur: String(c.id), label: c.nom })),
@@ -206,7 +206,7 @@ export default function AdminUtilisateursPage() {
                     <Th>{''}</Th>
                   </THead>
                   <tbody>
-                    {liste.items.map((u) => (
+                    {liste.pageItems.map((u) => (
                       <Tr key={u.id}>
                         <Td strong>
                           {u.nom}
@@ -259,7 +259,7 @@ export default function AdminUtilisateursPage() {
                     ))}
                   </tbody>
                 </Table>
-                <LoadMore aSuite={liste.aSuite} chargement={liste.chargementSuite} onClick={liste.chargerSuite} nbCharges={liste.items.length} />
+                <Pagination pagination={liste.pagination} />
               </>
             )}
           </Card>
