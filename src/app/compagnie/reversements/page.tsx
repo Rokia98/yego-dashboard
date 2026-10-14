@@ -28,6 +28,7 @@ export default function MesReversementsPage() {
   const [commentaire, setCommentaire] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [cleDemandes, setCleDemandes] = useState(0);
+  const [resultat, setResultat] = useState<{ ok: boolean; texte: string } | null>(null);
 
   const charger = useCallback(() => {
     setErreur(null);
@@ -47,15 +48,22 @@ export default function MesReversementsPage() {
     if (ready && JEKO) charger();
   }, [ready, charger]);
 
+  // C'est l'API qui décide (montant disponible, demande déjà en attente…) :
+  // le bouton reste actif et sa réponse est affichée telle quelle.
   async function demander() {
     setEnvoi(true);
+    setResultat(null);
     try {
-      await reversementsApi.demander(commentaire.trim() || undefined);
+      const d = await reversementsApi.demander(commentaire.trim() || undefined);
       setCommentaire('');
+      setResultat({
+        ok: true,
+        texte: `Demande #${d.id} envoyée (${formatFcfa(d.montantNetEstime)}) : l’équipe Yègo a été prévenue.`,
+      });
       setCleDemandes((k) => k + 1);
       charger();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la demande');
+      setResultat({ ok: false, texte: err instanceof Error ? err.message : 'Erreur lors de la demande' });
     } finally {
       setEnvoi(false);
     }
@@ -76,6 +84,7 @@ export default function MesReversementsPage() {
 
   const net = apercu ? Number(apercu.montantNet) : 0;
   const enAttente = solde?.demandeEnAttente ?? null;
+  const enAttenteMontant = solde ? Number(solde.enAttente.montantNet) : 0;
 
   return (
     <DashboardShell nav={COMPAGNIE_NAV} title="Espace compagnie" userLabel={user?.telephone}>
@@ -121,14 +130,27 @@ export default function MesReversementsPage() {
                           placeholder="Ex. besoin de trésorerie pour le carburant"
                         />
                       </Field>
-                      <Button onClick={demander} disabled={envoi || net <= 0} className="w-full">
-                        {envoi ? 'Envoi…' : `Demander le reversement de ${formatFcfa(apercu.montantNet)}`}
+                      <Button onClick={demander} disabled={envoi} className="w-full">
+                        {envoi
+                          ? 'Envoi…'
+                          : net > 0
+                            ? `Demander le reversement de ${formatFcfa(apercu.montantNet)}`
+                            : 'Demander un reversement'}
                       </Button>
-                      <p className="text-xs text-ink-faint">
-                        {net <= 0
-                          ? 'Rien à reverser pour le moment.'
-                          : 'Une fois la demande validée, l’équipe Yègo vous remet le montant en main propre.'}
-                      </p>
+                      {resultat ? (
+                        <p className={`text-sm ${resultat.ok ? 'text-success' : 'text-danger'}`}>{resultat.texte}</p>
+                      ) : (
+                        <p className="text-xs text-ink-faint">
+                          {net > 0
+                            ? 'Une fois la demande validée, l’équipe Yègo vous remet le montant en main propre.'
+                            : 'Rien n’est encore disponible : les ventes en ligne le deviennent le lendemain du départ.'}
+                        </p>
+                      )}
+                      {!resultat?.ok && enAttenteMontant > 0 && (
+                        <p className="text-xs text-ink-faint">
+                          {formatFcfa(enAttenteMontant)} encore en attente (départs à venir ou remboursements en cours).
+                        </p>
+                      )}
                     </div>
                   ))}
               </ApercuReversement>
