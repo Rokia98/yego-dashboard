@@ -17,7 +17,7 @@ export type ReservationTrajet = {
   villeArriveeId: number;
   villeDepart?: Ville;
   villeArrivee?: Ville;
-  compagnie?: { id: number; nom: string };
+  compagnie?: { id: number; nom: string; logoUrl?: string | null };
 };
 
 export type Reservation = {

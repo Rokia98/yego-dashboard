@@ -22,7 +22,7 @@ import { ticketsApi } from '@/features/tickets';
 import type { Ticket } from '@/features/tickets';
 import { useAuthGuard } from '@/lib/auth';
 import { COMPAGNIE_NAV } from '@/lib/nav';
-import { formatFcfa, formatHeure } from '@/lib/format';
+import { formatDate, formatFcfa, formatHeure } from '@/lib/format';
 import { jourIso } from '@/lib/filtres';
 import { chiffresTelephone, estTelephoneValide, telephonePourApi } from '@/lib/telephone';
 
@@ -245,15 +245,24 @@ export default function GuichetPage() {
     setErreur(null);
   }
 
-  function infosImpression(r: Reservation, t: Ticket): TicketImpression {
+  // Données du billet imprimé (même présentation que l'app mobile).
+  function infosImpression(r: Reservation, t: Ticket, index: number, total: number): TicketImpression {
     const trajet = r.depart?.trajet;
     return {
       codeQr: t.codeQr,
       siege: t.siege,
+      statut: t.statut,
       passager: r.passagerNom,
-      trajet: trajet?.villeDepart && trajet?.villeArrivee ? `${trajet.villeDepart.nom} → ${trajet.villeArrivee.nom}` : undefined,
-      date: r.depart && trajet ? `${libelleJour(r.depart.dateDepart.slice(0, 10))} à ${formatHeure(trajet.heureDepart)}` : undefined,
+      villeDepart: trajet?.villeDepart?.nom,
+      villeArrivee: trajet?.villeArrivee?.nom,
+      heure: trajet ? formatHeure(trajet.heureDepart) : undefined,
+      date: r.depart ? formatDate(r.depart.dateDepart) : undefined,
       compagnie: trajet?.compagnie?.nom,
+      logoUrl: trajet?.compagnie?.logoUrl,
+      prix: trajet?.prix,
+      reservationId: r.id,
+      numero: index + 1,
+      total,
     };
   }
 
@@ -334,7 +343,7 @@ export default function GuichetPage() {
   if (!ready) return null;
 
   const r = vente?.reservation;
-  const impressions = r && vente ? vente.tickets.map((t) => infosImpression(r, t)) : [];
+  const impressions = r && vente ? vente.tickets.map((t, i, tous) => infosImpression(r, t, i, tous.length)) : [];
 
   return (
     <DashboardShell nav={COMPAGNIE_NAV} title="Espace compagnie" userLabel={user?.telephone}>
