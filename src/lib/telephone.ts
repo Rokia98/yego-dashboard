@@ -19,6 +19,14 @@ export function formatTelephone(saisie: string): string {
 }
 
 /**
+ * Lien WhatsApp (wa.me) vers un numéro ivoirien, message pré-rempli : ouvre
+ * WhatsApp (application ou Web) sur la conversation, l'envoi reste manuel.
+ */
+export function lienWhatsApp(saisie: string, message: string): string {
+  return `https://wa.me/225${chiffresTelephone(saisie)}?text=${encodeURIComponent(message)}`;
+}
+
+/**
  * Forme envoyée à l'API. Depuis l'API 0.22.0, la normalisation E.164 est faite
  * côté serveur (@Transform sur tous les DTO à téléphone) : on envoie les
  * 10 chiffres bruts, l'API préfixe `+225`.

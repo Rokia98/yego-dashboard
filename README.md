@@ -190,9 +190,13 @@ exclut l'utilisateur. Ces contrôles ne pilotent que l'affichage : l'API reste s
 
 - Logo : fichier image → data-URI redimensionné (256px), envoyé dans `logoUrl`
   à `POST /compagnies` (API 0.22.0+), vignette affichée en liste.
-- Compte gestionnaire optionnel : `POST /compagnies/:id/compte-admin` crée un
-  `company_admin` et renvoie un mot de passe temporaire, affiché **une seule fois**
-  dans un encart avec bouton copier.
+- Bouton « Créer une compagnie » → formulaire en modale (`components/ui/Modal`) ; le téléphone
+  saisi est le numéro WhatsApp de la compagnie.
+- Compte gestionnaire, séparé de la création (action « Compte gestionnaire » par ligne, en
+  modale, ouverte automatiquement après la création) : `POST /compagnies/:id/compte-admin` crée (ou régénère)
+  un `company_admin` avec un mot de passe temporaire **jamais affiché** : « Envoyer par
+  WhatsApp » ouvre `wa.me` vers le numéro de la compagnie avec les identifiants pré-remplis,
+  l'admin valide l'envoi (`components/compagnies/CompteGestionnaire`).
 - Documents (registre de commerce, autorisation de transport, pièce d'identité du
   gérant) : panneau dépliable par compagnie (`components/documents/DocumentsPanel`),
   upload multipart, aperçu (blob authentifié), suppression, et validation/refus

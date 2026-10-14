@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Copy, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Upload } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import StatCard from '@/components/ui/StatCard';
@@ -11,6 +11,8 @@ import { Field, Input } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import DocumentsPanel from '@/components/documents/DocumentsPanel';
+import CompteGestionnaire from '@/components/compagnies/CompteGestionnaire';
+import Modal from '@/components/ui/Modal';
 import { FiltresBar, FiltreRecherche, FiltreSegments } from '@/components/ui/Filtres';
 import { normaliser, useFiltres } from '@/lib/filtres';
 import { compagniesApi } from '@/features/compagnies';
@@ -34,11 +36,7 @@ const CHAMPS_VIDES = {
   telephone: '',
   email: '',
   logoUrl: '',
-  gestionnaireNom: '',
-  gestionnaireTel: '',
 };
-
-type Identifiants = { compagnie: string; telephone: string; motDePasse: string };
 
 type Filtres = { q: string; statut: '' | 'actif' | 'en_attente' | 'suspendu'; abonnement: '' | 'actif' | 'aucun' };
 const FILTRES_DEFAUT: Filtres = { q: '', statut: '', abonnement: '' };
@@ -54,9 +52,9 @@ export default function AdminCompagniesPage() {
   const [enCours, setEnCours] = useState<number | null>(null);
   const [edite, setEdite] = useState<number | null>(null);
   const [champsEdit, setChampsEdit] = useState({ nom: '', telephone: '', email: '' });
-  const [identifiants, setIdentifiants] = useState<Identifiants | null>(null);
-  const [copie, setCopie] = useState(false);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [docsOuverts, setDocsOuverts] = useState<number | null>(null);
+  const [gestionnaireOuvert, setGestionnaireOuvert] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const filtres = useFiltres<Filtres>(FILTRES_DEFAUT, 'q');
 
@@ -88,14 +86,8 @@ export default function AdminCompagniesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErreur(null);
-    setIdentifiants(null);
     if (champs.telephone && !estTelephoneValide(champs.telephone)) {
-      setErreur('Le téléphone de la compagnie doit comporter 10 chiffres.');
-      return;
-    }
-    const avecGestionnaire = champs.gestionnaireNom.trim() !== '' || champs.gestionnaireTel !== '';
-    if (avecGestionnaire && (!champs.gestionnaireNom.trim() || !estTelephoneValide(champs.gestionnaireTel))) {
-      setErreur('Renseignez le nom et un téléphone à 10 chiffres pour le gestionnaire.');
+      setErreur('Le téléphone (WhatsApp) de la compagnie doit comporter 10 chiffres.');
       return;
     }
     setEnvoi(true);
@@ -107,29 +99,12 @@ export default function AdminCompagniesPage() {
         logoUrl: champs.logoUrl || undefined,
       });
 
-      if (avecGestionnaire) {
-        try {
-          const compte = await compagniesApi.creerCompteAdmin(compagnie.id, {
-            nom: champs.gestionnaireNom.trim(),
-            telephone: telephonePourApi(champs.gestionnaireTel),
-          });
-          setIdentifiants({
-            compagnie: compagnie.nom,
-            telephone: compte.telephone,
-            motDePasse: compte.motDePasseTemporaire,
-          });
-        } catch (err) {
-          setErreur(
-            `Compagnie créée, mais le compte gestionnaire a échoué : ${
-              err instanceof Error ? err.message : 'erreur inconnue'
-            }`,
-          );
-        }
-      }
-
       setChamps(CHAMPS_VIDES);
       if (fileRef.current) fileRef.current.value = '';
+      setFormulaireOuvert(false);
       await charger();
+      // Enchaîne sur le compte gestionnaire de la nouvelle compagnie (modale).
+      setGestionnaireOuvert(compagnie.id);
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Erreur lors de la création de la compagnie');
     } finally {
@@ -137,13 +112,12 @@ export default function AdminCompagniesPage() {
     }
   }
 
-  function copierIdentifiants() {
-    if (!identifiants) return;
-    const txt = `Yègo — ${identifiants.compagnie}\nTéléphone : ${identifiants.telephone}\nMot de passe : ${identifiants.motDePasse}`;
-    navigator.clipboard?.writeText(txt).then(() => {
-      setCopie(true);
-      setTimeout(() => setCopie(false), 2000);
-    });
+  // Fermer sans créer : on repart d'un formulaire vierge à la prochaine ouverture.
+  function fermerFormulaire() {
+    setFormulaireOuvert(false);
+    setErreur(null);
+    setChamps(CHAMPS_VIDES);
+    if (fileRef.current) fileRef.current.value = '';
   }
 
   async function handleStatut(id: number, statut: 'actif' | 'suspendu' | 'en_attente') {
@@ -187,6 +161,7 @@ export default function AdminCompagniesPage() {
       (a) => a.compagnieId === compagnieId && a.statut === 'actif' && new Date(a.dateFin) > new Date(),
     );
 
+  const compagnieGestionnaire = compagnies.find((c) => c.id === gestionnaireOuvert) ?? null;
   const actives = compagnies.filter((c) => c.statut === 'actif').length;
   const enAttente = compagnies.filter((c) => c.statut === 'en_attente').length;
   const suspendues = compagnies.filter((c) => c.statut === 'suspendu').length;
@@ -221,47 +196,24 @@ export default function AdminCompagniesPage() {
         <StatCard label="Total" value={compagnies.length} detail="Dans votre réseau" />
       </div>
 
-      {identifiants && (
-        <Card className="mb-6 border-success/30 bg-success-soft p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <Check className="h-4 w-4 text-success" strokeWidth={2} />
-                Compagnie « {identifiants.compagnie} » créée
-              </h2>
-              <p className="mt-1 text-xs text-ink-soft">
-                Identifiants du compte gestionnaire — communiquez-les à la compagnie, ils ne seront plus affichés.
-              </p>
-              <div className="mt-3 space-y-1 font-mono text-sm text-ink">
-                <div>
-                  Téléphone : <span className="font-semibold">{formatTelephone(identifiants.telephone)}</span>
-                </div>
-                <div>
-                  Mot de passe : <span className="font-semibold">{identifiants.motDePasse}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <Button variant="secondary" onClick={copierIdentifiants} className="!py-1.5 !text-xs">
-                {copie ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copie ? 'Copié' : 'Copier'}
-              </Button>
-              <button onClick={() => setIdentifiants(null)} className="text-ink-faint hover:text-ink" aria-label="Fermer">
-                <X className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            </div>
-          </div>
-        </Card>
-      )}
+      <div className="mb-6 flex justify-end">
+        <Button onClick={() => setFormulaireOuvert(true)}>
+          <Plus className="h-4 w-4" strokeWidth={2} /> Créer une compagnie
+        </Button>
+      </div>
 
-      <Card className="mb-6 p-5">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Ajouter une compagnie</h2>
+      <Modal
+        ouvert={formulaireOuvert}
+        titre="Créer une compagnie"
+        sousTitre="Le compte gestionnaire se crée ensuite ; ses identifiants partent par WhatsApp."
+        onFermer={envoi ? undefined : fermerFormulaire}
+      >
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Nom">
               <Input type="text" required value={champs.nom} onChange={(e) => setChamps({ ...champs, nom: e.target.value })} />
             </Field>
-            <Field label="Téléphone (10 chiffres)">
+            <Field label="Téléphone WhatsApp (10 chiffres)">
               <Input
                 type="tel"
                 inputMode="numeric"
@@ -271,9 +223,11 @@ export default function AdminCompagniesPage() {
                 onChange={(e) => setChamps({ ...champs, telephone: chiffresTelephone(e.target.value) })}
               />
             </Field>
-            <Field label="Email">
-              <Input type="email" value={champs.email} onChange={(e) => setChamps({ ...champs, email: e.target.value })} />
-            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Email">
+                <Input type="email" value={champs.email} onChange={(e) => setChamps({ ...champs, email: e.target.value })} />
+              </Field>
+            </div>
           </div>
 
           <div className="mt-4 flex items-center gap-4">
@@ -307,39 +261,25 @@ export default function AdminCompagniesPage() {
             </div>
           </div>
 
-          <div className="mt-5 border-t border-line-soft pt-4">
-            <h3 className="mb-1 text-xs font-semibold text-ink">Compte gestionnaire (optionnel)</h3>
-            <p className="mb-3 text-xs text-ink-faint">
-              Si renseigné, un compte <code className="rounded bg-line-soft px-1">company_admin</code> est créé avec un
-              mot de passe généré, affiché une seule fois.
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Nom du gestionnaire">
-                <Input
-                  type="text"
-                  value={champs.gestionnaireNom}
-                  onChange={(e) => setChamps({ ...champs, gestionnaireNom: e.target.value })}
-                />
-              </Field>
-              <Field label="Téléphone du gestionnaire (10 chiffres)">
-                <Input
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="0701020304"
-                  value={champs.gestionnaireTel}
-                  onChange={(e) => setChamps({ ...champs, gestionnaireTel: chiffresTelephone(e.target.value) })}
-                />
-              </Field>
-            </div>
-          </div>
-
           {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
-          <Button type="submit" disabled={envoi} className="mt-4">
-            {envoi ? 'Création...' : 'Créer la compagnie'}
-          </Button>
+          <div className="mt-5 flex justify-end gap-2 border-t border-line-soft pt-4">
+            <Button variant="ghost" onClick={fermerFormulaire} disabled={envoi}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={envoi}>
+              {envoi ? 'Création...' : 'Créer la compagnie'}
+            </Button>
+          </div>
         </form>
-      </Card>
+      </Modal>
+
+      {compagnieGestionnaire && (
+        <CompteGestionnaire
+          key={compagnieGestionnaire.id}
+          compagnie={compagnieGestionnaire}
+          onFermer={() => setGestionnaireOuvert(null)}
+        />
+      )}
 
       <FiltresBar nbActifs={filtres.nbActifs} onReinitialiser={filtres.reinitialiser}>
         <FiltreRecherche
@@ -451,6 +391,12 @@ export default function AdminCompagniesPage() {
                       <Td>
                         <div className="flex flex-wrap gap-3">
                           <Button variant="link" onClick={() => ouvrirEdition(c)}>Modifier</Button>
+                          <Button
+                            variant="link"
+                            onClick={() => setGestionnaireOuvert(c.id)}
+                          >
+                            Compte gestionnaire
+                          </Button>
                           <Button
                             variant="link"
                             onClick={() => setDocsOuverts(docsOuverts === c.id ? null : c.id)}
