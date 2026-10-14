@@ -111,7 +111,21 @@ export type SoldeCompagnie = {
   /** Effectivement remis en main propre. */
   totalReverse: { nombre: number; montant: string };
   dernierReversement: { id: number; montantNet: string; remisLe: string | null } | null;
-  demandeEnAttente: { id: number; montantNetEstime: string; dateDemande: string } | null;
+  demandeEnAttente: { id: number; montantNetEstime: string; montantDemande?: string | null; dateDemande: string } | null;
+  /**
+   * Solde par canal (SOLDE_PAR_CANAL) : les champs ci-dessus = ventes en ligne.
+   * guichet = paiements encaissés directement par la compagnie, sans passer par
+   * Jèko (espèces ou mobile money au comptoir), quel que soit le canal de la
+   * réservation. Seul ce bloc suit ?du&au ; enLigne et global sont cumulés.
+   */
+  guichet?: {
+    nombrePaiements: number;
+    encaisse: string; // payés + frais retenus des remboursés
+    rembourse: string; // rendu aux voyageurs (info)
+    parMoyen?: Record<string, string>; // moyens présents seulement ; somme = encaisse
+  };
+  enLigne?: { total: string }; // disponible + en attente + en cours + reversé
+  global?: { total: string }; // enLigne.total + guichet encaissé cumulé
 };
 
 // --- Demandes de reversement (compagnie → admin) ----------------------------
@@ -125,6 +139,8 @@ export type DemandeReversement = {
   statut: DemandeReversementStatut | string;
   /** Net disponible au moment de la demande ; recalculé à l'approbation. */
   montantNetEstime: string;
+  /** Montant choisi par la compagnie (MONTANT_DEMANDE) ; null = tout le disponible. */
+  montantDemande?: string | null;
   commentaire: string | null;
   motifRejet: string | null;
   demandeParId: number | null;

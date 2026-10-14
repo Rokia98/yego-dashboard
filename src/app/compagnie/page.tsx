@@ -14,7 +14,7 @@ import { reversementsApi } from '@/features/reversements';
 import type { SoldeCompagnie } from '@/features/reversements';
 import { useAuthGuard } from '@/lib/auth';
 import { COMPAGNIE_NAV } from '@/lib/nav';
-import { DEMANDES_REVERSEMENT, JEKO } from '@/lib/capacites';
+import { DEMANDES_REVERSEMENT, JEKO, SOLDE_PAR_CANAL } from '@/lib/capacites';
 import { formatFcfa, formatPourcentage } from '@/lib/format';
 
 const JOURS = [14, 30] as const;
@@ -148,13 +148,28 @@ export default function CompagnieDashboard() {
             <div className="flex items-center gap-3">
               <Banknote className="h-5 w-5 text-accent" strokeWidth={1.75} />
               <div>
-                <p className="text-xs font-medium text-ink-soft">Ventes en ligne à vous reverser</p>
-                <p className="text-lg font-semibold text-ink">
-                  {formatFcfa(solde.disponible.montantNet)}
-                  <span className="ml-2 text-xs font-normal text-ink-faint">
-                    disponible · {formatFcfa(solde.enAttente.montantNet)} en attente
-                  </span>
-                </p>
+                {SOLDE_PAR_CANAL && solde.global && solde.enLigne && solde.guichet ? (
+                  <>
+                    <p className="text-xs font-medium text-ink-soft">Solde global</p>
+                    <p className="text-lg font-semibold text-ink">
+                      {formatFcfa(solde.global.total)}
+                      <span className="ml-2 text-xs font-normal text-ink-faint">
+                        en ligne {formatFcfa(solde.enLigne.total)} · guichet {formatFcfa(solde.guichet.encaisse)} ·{' '}
+                        {formatFcfa(solde.disponible.montantNet)} à vous reverser
+                      </span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-medium text-ink-soft">Ventes en ligne à vous reverser</p>
+                    <p className="text-lg font-semibold text-ink">
+                      {formatFcfa(solde.disponible.montantNet)}
+                      <span className="ml-2 text-xs font-normal text-ink-faint">
+                        disponible · {formatFcfa(solde.enAttente.montantNet)} en attente
+                      </span>
+                    </p>
+                  </>
+                )}
               </div>
             </div>
             <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-ink">

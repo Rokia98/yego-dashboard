@@ -92,7 +92,9 @@ export default function DemandesReversement({
       !confirm(
         `Approuver la demande #${d.id} de ${nom} ?\n` +
           `Jèko transfère le montant vers le numéro ${operateur} de Yègo ; vous le remettrez ensuite en main propre à la compagnie. ` +
-          `Montant recalculé à l’instant (estimé à ${formatFcfa(d.montantNetEstime)} lors de la demande).`,
+          (d.montantDemande != null
+            ? `Montant demandé : ${formatFcfa(d.montantDemande)} (au plus, en billets entiers).`
+            : `Montant recalculé à l’instant (estimé à ${formatFcfa(d.montantNetEstime)} lors de la demande).`),
       )
     )
       return;
@@ -155,7 +157,7 @@ export default function DemandesReversement({
               <THead>
                 <Th>Demandée le</Th>
                 {admin && <Th>Compagnie</Th>}
-                <Th>Montant estimé</Th>
+                <Th>Montant demandé</Th>
                 <Th>Commentaire</Th>
                 <Th>Statut</Th>
                 <Th>{''}</Th>
@@ -168,7 +170,14 @@ export default function DemandesReversement({
                       <span className="block text-xs text-ink-faint">#{d.id}</span>
                     </Td>
                     {admin && <Td>{d.compagnie?.nom ?? `Compagnie #${d.compagnieId}`}</Td>}
-                    <Td className="tabular-nums font-medium text-accent-ink">{formatFcfa(d.montantNetEstime)}</Td>
+                    <Td className="tabular-nums font-medium text-accent-ink">
+                      {formatFcfa(d.montantDemande ?? d.montantNetEstime)}
+                      {d.montantDemande != null && (
+                        <span className="block text-xs font-normal text-ink-faint">
+                          sur {formatFcfa(d.montantNetEstime)} disponible
+                        </span>
+                      )}
+                    </Td>
                     <Td className="max-w-[16rem] text-xs">{d.commentaire || '—'}</Td>
                     <Td>
                       <Badge tone={TONE_STATUT_DEMANDE[d.statut] ?? 'neutral'}>

@@ -55,6 +55,22 @@ export const JEKO = true;
 export const DEMANDES_REVERSEMENT = true;
 
 /**
+ * POST /reversements/demandes accepte `montant` (entier ≥ 100, ≤ disponible) :
+ * la compagnie choisit le montant demandé, l'approbation reverse au plus ce
+ * montant (paiements entiers, plus anciens d'abord). Tant que `false`, le
+ * champ est masqué et la demande porte sur tout le disponible (l'API rejette
+ * les propriétés inconnues).
+ */
+export const MONTANT_DEMANDE = true;
+
+/**
+ * GET /dashboard/solde renvoie aussi `guichet`, `enLigne.total` et
+ * `global.total` : soldes séparés ventes en ligne / guichet + total. Tant que
+ * `false`, seul le solde des ventes en ligne est affiché.
+ */
+export const SOLDE_PAR_CANAL = true;
+
+/**
  * GET /utilisateurs filtrable (role, compagnieId, actif, q) avec total dans
  * l'en-tête X-Total-Count (exposé par CORS). Tant que `false`, la page
  * Utilisateurs affiche un message d'attente.

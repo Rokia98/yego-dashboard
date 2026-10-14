@@ -236,6 +236,11 @@ compagnie n'est plus utilisé, le délai de sécurité de 24 h disparaît.
 - **Retraits Yègo** (`/admin/retraits`) : retrait de la part Yègo vers le numéro fixé côté API
   (`RETRAIT_YEGO_TELEPHONE`, Wave / Orange Money). Retirable = solde Jèko − engagements, frais
   Jèko du retrait déjà déduits ; mot de passe redemandé, un seul retrait en cours à la fois.
+- **Montant de la demande** (`MONTANT_DEMANDE`) : la compagnie peut saisir le montant voulu
+  (≥ 100, ≤ disponible ; vide = tout le disponible). L'approbation reverse au plus ce montant,
+  en billets entiers, les plus anciens d'abord.
+- **Solde par canal** (`SOLDE_PAR_CANAL`) : solde global, ventes en ligne (payées via Jèko) et
+  ventes au guichet (encaissées directement par la compagnie, détail par moyen de paiement).
 - **Frais de service** : 3,5 % en ligne (lu sur l'API, rien en dur).
 - **Utilisateurs** (`/admin/utilisateurs`) : `GET /utilisateurs` filtré (rôle, compagnie, état,
   recherche) ; total lu dans `X-Total-Count` (`apiFetchAvecTotal`, en-tête exposé par CORS) ;

@@ -16,8 +16,11 @@ import { reversementsApi } from '@/features/reversements';
 import type { ApercuReversement as Apercu, SoldeCompagnie as Solde } from '@/features/reversements';
 import { useAuthGuard } from '@/lib/auth';
 import { COMPAGNIE_NAV } from '@/lib/nav';
-import { DEMANDES_REVERSEMENT, JEKO } from '@/lib/capacites';
+import { DEMANDES_REVERSEMENT, JEKO, MONTANT_DEMANDE } from '@/lib/capacites';
 import { formatDateHeure, formatFcfa } from '@/lib/format';
+
+// Minimum d'une demande à montant choisi (contrat MONTANT_DEMANDE).
+const MONTANT_MIN = 100;
 
 // L'équipe Yègo déclenche les reversements ; la compagnie peut en faire la demande.
 export default function MesReversementsPage() {
@@ -29,6 +32,7 @@ export default function MesReversementsPage() {
   const [envoi, setEnvoi] = useState(false);
   const [cleDemandes, setCleDemandes] = useState(0);
   const [resultat, setResultat] = useState<{ ok: boolean; texte: string } | null>(null);
+  const [montant, setMontant] = useState('');
 
   const charger = useCallback(() => {
     setErreur(null);
@@ -51,14 +55,29 @@ export default function MesReversementsPage() {
   // C'est l'API qui décide (montant disponible, demande déjà en attente…) :
   // le bouton reste actif et sa réponse est affichée telle quelle.
   async function demander() {
-    setEnvoi(true);
     setResultat(null);
+    // Montant choisi (vide = tout le disponible) : bornes vérifiées ici, l'API tranche.
+    let montantChoisi: number | undefined;
+    if (MONTANT_DEMANDE && montant.trim()) {
+      const m = Number(montant.replace(/\s/g, ''));
+      if (!Number.isInteger(m) || m < MONTANT_MIN) {
+        setResultat({ ok: false, texte: `Montant entier d’au moins ${formatFcfa(MONTANT_MIN)}.` });
+        return;
+      }
+      if (net > 0 && m > net) {
+        setResultat({ ok: false, texte: `Au maximum ${formatFcfa(net)} (montant disponible).` });
+        return;
+      }
+      montantChoisi = m;
+    }
+    setEnvoi(true);
     try {
-      const d = await reversementsApi.demander(commentaire.trim() || undefined);
+      const d = await reversementsApi.demander(commentaire.trim() || undefined, montantChoisi);
       setCommentaire('');
+      setMontant('');
       setResultat({
         ok: true,
-        texte: `Demande #${d.id} envoyée (${formatFcfa(d.montantNetEstime)}) : l’équipe Yègo a été prévenue.`,
+        texte: `Demande #${d.id} envoyée (${formatFcfa(d.montantDemande ?? d.montantNetEstime)}) : l’équipe Yègo a été prévenue.`,
       });
       setCleDemandes((k) => k + 1);
       charger();
@@ -114,7 +133,7 @@ export default function MesReversementsPage() {
                     <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-ink-soft">
                         Demande #{enAttente.id} envoyée le {formatDateHeure(enAttente.dateDemande)} (
-                        {formatFcfa(enAttente.montantNetEstime)}) : en attente de l’équipe Yègo.
+                        {formatFcfa(enAttente.montantDemande ?? enAttente.montantNetEstime)}) : en attente de l’équipe Yègo.
                       </p>
                       <Button variant="link-danger" onClick={() => annulerEnAttente(enAttente.id)} className="shrink-0">
                         Annuler la demande
@@ -122,6 +141,16 @@ export default function MesReversementsPage() {
                     </div>
                   ) : (
                     <div className="space-y-3">
+                      {MONTANT_DEMANDE && (
+                        <Field label={net > 0 ? `Montant demandé (max ${formatFcfa(net)})` : 'Montant demandé'}>
+                          <Input
+                            inputMode="numeric"
+                            value={montant}
+                            onChange={(e) => setMontant(e.target.value.replace(/[^\d\s]/g, ''))}
+                            placeholder={net > 0 ? `${net.toLocaleString('fr-FR')} (tout le disponible)` : 'Ex. 50 000'}
+                          />
+                        </Field>
+                      )}
                       <Field label="Commentaire (facultatif)">
                         <Input
                           value={commentaire}
@@ -133,9 +162,11 @@ export default function MesReversementsPage() {
                       <Button onClick={demander} disabled={envoi} className="w-full">
                         {envoi
                           ? 'Envoi…'
-                          : net > 0
-                            ? `Demander le reversement de ${formatFcfa(apercu.montantNet)}`
-                            : 'Demander un reversement'}
+                          : MONTANT_DEMANDE && montant.trim() && Number(montant.replace(/\s/g, '')) > 0
+                            ? `Demander le reversement de ${formatFcfa(Number(montant.replace(/\s/g, '')))}`
+                            : net > 0
+                              ? `Demander le reversement de ${formatFcfa(apercu.montantNet)}`
+                              : 'Demander un reversement'}
                       </Button>
                       {resultat ? (
                         <p className={`text-sm ${resultat.ok ? 'text-success' : 'text-danger'}`}>{resultat.texte}</p>

@@ -56,10 +56,14 @@ export const reversementsApi = {
   // Demandes : la compagnie demande, l'admin approuve (lance le transfert) ou rejette.
 
   /** company_admin : une seule demande en attente à la fois (409 sinon). */
-  demander: (commentaire?: string) =>
+  /** montant : seulement si l'API le gère (MONTANT_DEMANDE) ; absent = tout le disponible. */
+  demander: (commentaire?: string, montant?: number) =>
     apiFetch<DemandeReversement>('/reversements/demandes', {
       method: 'POST',
-      body: JSON.stringify(commentaire ? { commentaire } : {}),
+      body: JSON.stringify({
+        ...(commentaire ? { commentaire } : {}),
+        ...(montant != null ? { montant } : {}),
+      }),
     }),
   /** admin : toutes (filtre compagnieId) ; company_admin : celles de sa compagnie. */
   demandes: ({ take = 20, skip = 0, compagnieId, statut }: ListeParams = {}) =>
