@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ShieldAlert } from 'lucide-react';
 import { Field, Input } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
-import { chargerUtilisateur, changerMotDePasse, homeForRole, saveSession } from '@/lib/auth';
+import { chargerUtilisateur, changerMotDePasse, homeForRole, PATH_CONNEXION, saveSession } from '@/lib/auth';
 
 export default function ChangerMotDePassePage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function ChangerMotDePassePage() {
   useEffect(() => {
     chargerUtilisateur().then((current) => {
       if (!current) {
-        router.replace('/');
+        router.replace(PATH_CONNEXION);
         return;
       }
       // ?obligatoire=1 : posé par http.ts sur un 403 MOT_DE_PASSE_A_CHANGER.

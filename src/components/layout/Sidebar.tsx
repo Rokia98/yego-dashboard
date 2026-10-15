@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { KeyRound, LogOut, Menu, Moon, Sun, X } from 'lucide-react';
-import { getCurrentUser, logout, PATH_CHANGEMENT_MDP, type UserRole } from '@/lib/auth';
+import { getCurrentUser, logout, PATH_CHANGEMENT_MDP, PATH_CONNEXION, type UserRole } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { navPourRole, RACINES, type NavGroup } from '@/lib/nav';
 
@@ -40,13 +40,13 @@ export default function Sidebar({ groups, title, userLabel }: SidebarProps) {
 
   async function handleLogout() {
     await logout();
-    router.push('/');
+    router.push(PATH_CONNEXION);
   }
 
   const contenu = (
     <>
       <div className="mb-5 flex items-center gap-2.5 px-1.5 lg:mb-6">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href={PATH_CONNEXION} className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-sm font-bold text-white shadow-subtle">
             Y
           </span>

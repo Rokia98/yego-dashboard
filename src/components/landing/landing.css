@@ -1,0 +1,471 @@
+/*
+  Landing page : animations limitées à transform / opacity (fluides sur mobile,
+  aucune librairie). Toutes les couleurs passent par les tokens de globals.css,
+  donc le thème sombre est géré sans règle supplémentaire.
+*/
+
+html:has(.lp) {
+  scroll-behavior: smooth;
+}
+
+.lp {
+  --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  overflow-x: clip;
+}
+
+/* ---------- Apparition au défilement (Revele) ---------- */
+
+.lp-revele {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition:
+    opacity 0.9s var(--lp-ease),
+    transform 0.9s var(--lp-ease);
+  transition-delay: var(--d, 0ms);
+}
+.lp-revele[data-variante='gauche'] {
+  transform: translate3d(-36px, 0, 0);
+}
+.lp-revele[data-variante='droite'] {
+  transform: translate3d(36px, 0, 0);
+}
+.lp-revele[data-variante='zoom'] {
+  transform: scale(0.94);
+}
+.lp-revele.est-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Entrée du héros ---------- */
+
+.lp-entree {
+  animation: lp-entree 1s var(--lp-ease) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes lp-entree {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+}
+
+.lp-mot {
+  display: inline-block;
+  animation: lp-mot 1s var(--lp-ease) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes lp-mot {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 105%, 0) rotate(4deg);
+  }
+}
+
+/* Mot qui tourne : 4 mots + le premier répété pour boucler sans saut. */
+.lp-rotation {
+  display: block;
+  height: 1.12em;
+  overflow: hidden;
+}
+.lp-rotation-liste {
+  display: block;
+  animation: lp-rotation 10s var(--lp-ease) infinite;
+}
+.lp-rotation-liste > span {
+  display: block;
+  height: 1.12em;
+}
+@keyframes lp-rotation {
+  0%, 18% { transform: translate3d(0, 0, 0); }
+  25%, 43% { transform: translate3d(0, -20%, 0); }
+  50%, 68% { transform: translate3d(0, -40%, 0); }
+  75%, 93% { transform: translate3d(0, -60%, 0); }
+  100% { transform: translate3d(0, -80%, 0); }
+}
+
+.lp-degrade {
+  background-image: linear-gradient(
+    100deg,
+    rgb(var(--accent)) 0%,
+    rgb(var(--chart-2)) 30%,
+    rgb(var(--accent-ink)) 55%,
+    rgb(var(--accent)) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-degrade 6s linear infinite;
+}
+@keyframes lp-degrade {
+  to { background-position: -200% 0; }
+}
+
+/* ---------- Fond du héros ---------- */
+
+.lp-grille {
+  background-image:
+    linear-gradient(rgb(var(--line) / 0.7) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--line) / 0.7) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+}
+
+.lp-tache {
+  position: absolute;
+  border-radius: 9999px;
+  will-change: transform;
+  animation: lp-derive var(--duree, 18s) ease-in-out infinite alternate;
+}
+@keyframes lp-derive {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(6%, 8%, 0) scale(1.12); }
+  100% { transform: translate3d(-8%, 3%, 0) scale(0.92); }
+}
+
+/* ---------- Boutons ---------- */
+
+.lp-brillant {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.lp-brillant::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.8s var(--lp-ease);
+}
+.lp-brillant:hover::after {
+  transform: translateX(120%);
+}
+
+.lp-pulsation {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  animation: lp-pulsation 2.2s ease-out infinite;
+}
+@keyframes lp-pulsation {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/* Soulignement animé des liens de navigation */
+.lp-lien {
+  position: relative;
+}
+.lp-lien::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--accent));
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.4s var(--lp-ease);
+}
+.lp-lien:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ---------- Billet du héros ---------- */
+
+.lp-billet {
+  transform-style: preserve-3d;
+  transition: transform 0.6s var(--lp-ease);
+  will-change: transform;
+}
+.lp-reflet {
+  background: radial-gradient(
+    500px circle at var(--reflet-x, 50%) var(--reflet-y, 0%),
+    rgb(255 255 255 / 0.18),
+    transparent 45%
+  );
+}
+.lp-parallaxe {
+  translate: calc(var(--px, 0) * var(--force, -18px)) calc(var(--py, 0) * var(--force, -18px));
+  transition: translate 0.6s var(--lp-ease);
+}
+
+.lp-flotte {
+  animation: lp-flotte 5s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes lp-flotte {
+  to { transform: translate3d(0, -12px, 0); }
+}
+
+.lp-piste {
+  container-type: inline-size;
+}
+.lp-car {
+  animation: lp-car 5s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+}
+@keyframes lp-car {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100cqw - 100%)); }
+}
+
+.lp-scan {
+  animation: lp-scan 2.4s ease-in-out infinite alternate;
+}
+@keyframes lp-scan {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--course, 80px)); }
+}
+
+/* ---------- Bande défilante ---------- */
+
+.lp-defilant {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.lp-defilant-piste {
+  display: flex;
+  width: max-content;
+  animation: lp-defile 45s linear infinite;
+}
+.lp-defilant:hover .lp-defilant-piste {
+  animation-play-state: paused;
+}
+@keyframes lp-defile {
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ---------- Cartes avec projecteur ---------- */
+
+.lp-projecteur {
+  transition:
+    transform 0.5s var(--lp-ease),
+    box-shadow 0.5s var(--lp-ease),
+    border-color 0.5s var(--lp-ease);
+}
+.lp-projecteur::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    420px circle at var(--x, 50%) var(--y, 50%),
+    rgb(var(--accent) / 0.13),
+    transparent 45%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.lp-projecteur:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card);
+  border-color: rgb(var(--accent) / 0.35);
+}
+.lp-projecteur:hover::before {
+  opacity: 1;
+}
+
+/* Plan de sièges qui se remplit */
+.lp-siege {
+  animation: lp-siege 7s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes lp-siege {
+  0%, 18% {
+    background-color: rgb(var(--surface-2));
+    border-color: rgb(var(--line));
+    transform: scale(1);
+  }
+  22% { transform: scale(1.18); }
+  26%, 88% {
+    background-color: rgb(var(--accent));
+    border-color: rgb(var(--accent));
+    transform: scale(1);
+  }
+  94%, 100% {
+    background-color: rgb(var(--surface-2));
+    border-color: rgb(var(--line));
+  }
+}
+
+/* Point GPS qui suit le tracé */
+.lp-gps {
+  animation: lp-gps 6s ease-in-out infinite alternate;
+}
+@keyframes lp-gps {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
+}
+.lp-onde {
+  animation: lp-pulsation 1.8s ease-out infinite;
+}
+
+/* Notifications de paiement */
+.lp-toast {
+  opacity: 0;
+  animation: lp-toast 9s var(--lp-ease) infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes lp-toast {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.96);
+  }
+  6%, 30% {
+    opacity: 1;
+    transform: none;
+  }
+  36%, 100% {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0) scale(0.98);
+  }
+}
+
+/* Graphique qui se dessine à l'apparition */
+.lp-barre {
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 1.1s var(--lp-ease);
+  transition-delay: var(--d, 0ms);
+}
+.est-visible .lp-barre {
+  transform: scaleY(1);
+}
+.lp-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 2s var(--lp-ease) 0.4s;
+}
+.est-visible .lp-trace {
+  stroke-dashoffset: 0;
+}
+
+/* ---------- Parcours (frise qui se remplit au défilement) ---------- */
+
+.lp-frise-remplie {
+  transform: scaleY(0);
+  transform-origin: top;
+}
+.lp-etape-point {
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease,
+    transform 0.5s var(--lp-ease),
+    box-shadow 0.4s ease;
+}
+[data-actif] .lp-etape-point {
+  background-color: rgb(var(--accent));
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 0 0 6px rgb(var(--accent) / 0.15);
+}
+.lp-etape-carte {
+  transition:
+    opacity 0.6s var(--lp-ease),
+    transform 0.6s var(--lp-ease);
+  opacity: 0.45;
+  transform: translateX(8px);
+}
+[data-actif] .lp-etape-carte {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Démo téléphone (3 écrans en boucle) ---------- */
+
+.lp-ecran {
+  opacity: 0;
+  animation: lp-ecran 12s var(--lp-ease) infinite both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes lp-ecran {
+  0% {
+    opacity: 0;
+    transform: translate3d(24px, 0, 0);
+  }
+  3%, 30% {
+    opacity: 1;
+    transform: none;
+  }
+  33.3%, 100% {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0);
+  }
+}
+.lp-etape-demo {
+  animation: lp-etape-demo 12s ease infinite both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes lp-etape-demo {
+  0%, 33.3%, 100% {
+    color: rgb(var(--ink-faint));
+    border-color: rgb(var(--line));
+  }
+  3%, 30% {
+    color: rgb(var(--accent-ink));
+    border-color: rgb(var(--accent));
+  }
+}
+
+/* ---------- Appel à l'action ---------- */
+
+.lp-aurore::before,
+.lp-aurore::after {
+  content: '';
+  position: absolute;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: lp-derive 14s ease-in-out infinite alternate;
+}
+.lp-aurore::before {
+  top: -45%;
+  left: -15%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.22), transparent 65%);
+}
+.lp-aurore::after {
+  bottom: -50%;
+  right: -20%;
+  background: radial-gradient(circle, rgb(var(--chart-2) / 0.7), transparent 65%);
+  animation-duration: 18s;
+  animation-direction: alternate-reverse;
+}
+
+/* ---------- Mouvement réduit ---------- */
+/* globals.css raccourcit les durées : on coupe ici les boucles infinies pour
+   éviter qu'elles ne clignotent, et on garde un état final lisible. */
+@media (prefers-reduced-motion: reduce) {
+  html:has(.lp) {
+    scroll-behavior: auto;
+  }
+  .lp *,
+  .lp *::before,
+  .lp *::after {
+    animation: none !important;
+  }
+  .lp-revele {
+    transition-delay: 0ms !important;
+  }
+  .lp-toast:first-child,
+  .lp-ecran:last-child {
+    opacity: 1;
+  }
+  .lp-gps {
+    offset-distance: 60%;
+  }
+}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from './http';
 import {
   API_URL,
+  PATH_CONNEXION,
   accessTokenValide,
   decodeJwt,
   ecrireSession,
@@ -20,6 +21,7 @@ export type UserRole = 'user' | 'agent' | 'company_admin' | 'admin';
 // ici si l'API choisit un autre nom.
 const CLAIM_MDP_TEMPORAIRE = 'pwTmp';
 export const PATH_CHANGEMENT_MDP = '/changer-mot-de-passe';
+export { PATH_CONNEXION };
 
 export type AuthUser = {
   userId: number;
@@ -68,7 +70,7 @@ export async function chargerUtilisateur(): Promise<AuthUser | null> {
 export function homeForRole(role: UserRole): string {
   if (role === 'admin') return '/admin';
   if (role === 'agent' || role === 'company_admin') return '/compagnie';
-  return '/';
+  return PATH_CONNEXION;
 }
 
 export type SessionApres = { accessToken: string; refreshToken: string; role: UserRole };
@@ -101,7 +103,7 @@ export async function logout() {
   if (refreshToken) await revoquerRefreshToken(refreshToken);
 }
 
-// Protège une page cliente : redirige vers la connexion (`/`) si la session est
+// Protège une page cliente : redirige vers la connexion (`/connexion`) si la session est
 // perdue, vers l'écran de changement de mot de passe s'il est temporaire (sauf
 // sur cet écran lui-même), ou vers le dashboard adapté si le rôle ne fait pas
 // partie de `allowedRoles`.
@@ -116,7 +118,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
       if (annule) return;
       if (!current) {
         effacerSession();
-        router.replace('/');
+        router.replace(PATH_CONNEXION);
         return;
       }
       if (current.motDePasseTemporaire && window.location.pathname !== PATH_CHANGEMENT_MDP) {

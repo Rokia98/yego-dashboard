@@ -1,5 +1,8 @@
 // Stockage de la session (jetons) — source unique partagée par lib/http et lib/auth.
 
+/** Page de connexion : cible de toute redirection après perte de session. */
+export const PATH_CONNEXION = '/connexion';
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 const TOKEN_KEY = 'yego_token';

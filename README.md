@@ -30,7 +30,8 @@ sur une base de production.
 ```
 src/
   app/
-    page.tsx                       -> connexion (redirige selon le rôle du JWT)
+    page.tsx                       -> landing page publique (statique, composant serveur)
+    connexion/page.tsx             -> connexion (redirige selon le rôle du JWT)
     compagnie/
       page.tsx                     -> vue d'ensemble (stats 30 j, top trajets)
       guichet/page.tsx             -> vente au comptoir + QR imprimable + rafraîchissement des places
@@ -173,7 +174,7 @@ via `fetch` direct. Toute nouvelle ressource s'ajoute comme un dossier `features
   `formatFcfa` — ne jamais afficher `montant`/`prix` brut.
 - **Auth** : access token 15 min, refresh rotatif 30 j. `useAuthGuard` rafraîchit la session au
   chargement d'une page si l'access token est expiré ; `lib/http.ts` tente un refresh unique et
-  silencieux sur 401, rejoue la requête, puis redirige vers `/` en cas d'échec.
+  silencieux sur 401, rejoue la requête, puis redirige vers `/connexion` en cas d'échec.
 - **Scoping** : `/reservations`, `/vehicules`, `/chauffeurs`, `/agents`, `/tickets`,
   `/remboursements`, `/dashboard/*` sont auto-filtrés par la compagnie du JWT (`cid`).
   `/departs` accepte `?compagnieId=`. `/trajets` non scopé -> `/trajets/compagnie/:id`.

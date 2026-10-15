@@ -1,5 +1,6 @@
 import {
   API_URL,
+  PATH_CONNEXION,
   effacerSession,
   lireAccessToken,
   lireRefreshToken,
@@ -11,10 +12,9 @@ const PATH_CHANGEMENT_MDP = '/changer-mot-de-passe';
 
 function redirigerVersConnexion() {
   effacerSession();
-  if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+  if (typeof window !== 'undefined' && window.location.pathname !== PATH_CONNEXION) {
     // Rechargement complet voulu : repart d'un état mémoire vierge après la perte de session.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = '/';
+    window.location.href = PATH_CONNEXION;
   }
 }
 
