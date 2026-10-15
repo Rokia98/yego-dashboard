@@ -11,3 +11,6 @@ export const LIEN_WHATSAPP = lienWhatsApp(
 export const LIEN_APPEL = `tel:+225${WHATSAPP_PARTENAIRES}`;
 
 export const TELEPHONE_AFFICHE = formatTelephone(WHATSAPP_PARTENAIRES);
+
+/** Fiche Play Store de l'app voyageurs (package Android de yego-mobile). */
+export const LIEN_PLAY_STORE = 'https://play.google.com/store/apps/details?id=com.compagny.yego';

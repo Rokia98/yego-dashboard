@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { Bus, CheckCircle2, MapPin, Search, Store, Wallet } from 'lucide-react';
+import { Bus, CheckCircle2, MapPin, Search } from 'lucide-react';
+import { LogoPaiement } from './Paiements';
+import { MOBILE_MONEY } from './moyensPaiement';
 
 // Illustrations décoratives de la landing page, animées en CSS seul
 // (classes `lp-*` de landing.css). Valeurs déterministes : pas d'écart d'hydratation.
@@ -115,26 +117,25 @@ export function CarteGps() {
 /* ---------- Notifications de paiement ---------- */
 
 const PAIEMENTS = [
-  { canal: 'Wave', montant: '+7 000 F', trajet: 'Abidjan → Bouaké', icon: Wallet },
-  { canal: 'Orange Money', montant: '+5 500 F', trajet: 'Abidjan → Yamoussoukro', icon: Wallet },
-  { canal: 'Guichet', montant: '+6 000 F', trajet: 'Bouaké → Korhogo', icon: Store },
+  { moyen: MOBILE_MONEY[0], montant: '+7 000 F', trajet: 'Abidjan → Bouaké' },
+  { moyen: MOBILE_MONEY[1], montant: '+5 500 F', trajet: 'Abidjan → Yamoussoukro' },
+  { moyen: MOBILE_MONEY[2], montant: '+9 000 F', trajet: 'Abidjan → Korhogo' },
+  { moyen: MOBILE_MONEY[3], montant: '+6 000 F', trajet: 'Bouaké → Man' },
 ];
 
 export function NotificationsPaiement() {
   return (
-    <div className="relative h-[76px]">
-      {PAIEMENTS.map(({ canal, montant, trajet, icon: Icone }, i) => (
+    <div className="relative h-[68px]">
+      {PAIEMENTS.map(({ moyen, montant, trajet }, i) => (
         <div
-          key={canal}
+          key={moyen.nom}
           className="lp-toast absolute inset-x-0 top-0 flex items-center gap-3 rounded-2xl border border-line bg-paper p-3 shadow-subtle"
           style={v({ '--d': `${i * 3}s` })}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
-            <Icone className="h-5 w-5" />
-          </span>
+          <LogoPaiement moyen={moyen} taille={40} />
           <div className="min-w-0 flex-1">
             <p className="flex items-center justify-between gap-2 text-sm font-semibold">
-              {canal}
+              {moyen.nom}
               <span className="tabular-nums text-success">{montant}</span>
             </p>
             <p className="truncate text-xs text-ink-faint">{trajet}</p>
@@ -199,8 +200,8 @@ export function TelephoneDemo() {
           aria-hidden
           className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgb(var(--accent)/0.22),transparent_65%)]"
         />
-        <div className="relative h-[520px] w-[260px] rounded-[2.75rem] border-[10px] border-ink bg-surface shadow-pop">
-          <span className="absolute left-1/2 top-2 z-10 h-5 w-20 -translate-x-1/2 rounded-full bg-ink" />
+        <div className="relative h-[520px] w-[260px] rounded-[2.75rem] border-[10px] border-[#12141a] bg-surface shadow-pop ring-1 ring-white/10">
+          <span className="absolute left-1/2 top-2 z-10 h-5 w-20 -translate-x-1/2 rounded-full bg-[#12141a]" />
           <div className="relative h-full overflow-hidden rounded-[2rem] bg-paper">
             <EcranRecherche />
             <EcranPaiement />
@@ -275,23 +276,19 @@ function EcranPaiement() {
     <Ecran index={1}>
       <p className="text-lg font-semibold tracking-tight">Paiement</p>
       <p className="mt-1 text-xs text-ink-faint">Abidjan → Bouaké · 07:30 · Siège 14</p>
-      <div className="mt-5 space-y-2">
-        {[
-          { nom: 'Wave', actif: true },
-          { nom: 'Orange Money', actif: false },
-        ].map((m) => (
+      <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-ink-faint">Mobile Money</p>
+      <div className="mt-2 space-y-1.5">
+        {MOBILE_MONEY.map((m, i) => (
           <div
             key={m.nom}
-            className={`flex items-center justify-between rounded-xl border p-3.5 text-sm font-medium ${
-              m.actif ? 'border-accent bg-accent-soft' : 'border-line bg-surface'
+            className={`flex items-center justify-between rounded-xl border px-2.5 py-1.5 text-sm font-medium ${
+              i === 0 ? 'border-accent bg-accent-soft' : 'border-line bg-surface'
             }`}
           >
-            <span className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-accent" /> {m.nom}
+            <span className="flex items-center gap-2.5">
+              <LogoPaiement moyen={m} taille={26} className="rounded-lg" /> {m.nom}
             </span>
-            <span
-              className={`h-4 w-4 rounded-full border-2 ${m.actif ? 'border-accent bg-accent' : 'border-line'}`}
-            />
+            <span className={`h-4 w-4 rounded-full border-2 ${i === 0 ? 'border-accent bg-accent' : 'border-line'}`} />
           </div>
         ))}
       </div>

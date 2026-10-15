@@ -314,10 +314,10 @@ html:has(.lp) {
   animation: lp-pulsation 1.8s ease-out infinite;
 }
 
-/* Notifications de paiement */
+/* Notifications de paiement : 4 notifications, 3 s chacune */
 .lp-toast {
   opacity: 0;
-  animation: lp-toast 9s var(--lp-ease) infinite;
+  animation: lp-toast 12s var(--lp-ease) infinite;
   animation-delay: var(--d, 0s);
 }
 @keyframes lp-toast {
@@ -325,11 +325,11 @@ html:has(.lp) {
     opacity: 0;
     transform: translate3d(0, 18px, 0) scale(0.96);
   }
-  6%, 30% {
+  4%, 21% {
     opacity: 1;
     transform: none;
   }
-  36%, 100% {
+  25%, 100% {
     opacity: 0;
     transform: translate3d(0, -14px, 0) scale(0.98);
   }
@@ -444,6 +444,30 @@ html:has(.lp) {
   background: radial-gradient(circle, rgb(var(--chart-2) / 0.7), transparent 65%);
   animation-duration: 18s;
   animation-direction: alternate-reverse;
+}
+
+/* ---------- Orbite des moyens de paiement ---------- */
+
+.lp-orbite {
+  animation: lp-tourne 40s linear infinite;
+}
+.lp-contre-orbite {
+  animation: lp-tourne 40s linear infinite reverse;
+}
+.lp-orbite-inverse {
+  animation: lp-tourne 24s linear infinite reverse;
+}
+@keyframes lp-tourne {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Bandeau application ---------- */
+
+.lp-etoiles {
+  background-image: radial-gradient(rgb(255 255 255 / 0.5) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 70% 40%, #000, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 70% at 70% 40%, #000, transparent 75%);
 }
 
 /* ---------- Mouvement réduit ---------- */

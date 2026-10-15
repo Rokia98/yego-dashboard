@@ -8,10 +8,10 @@ import Logo from './Logo';
 
 const LIENS = [
   { href: '#fonctionnalites', label: 'Fonctionnalités' },
+  { href: '#paiements', label: 'Paiements' },
   { href: '#fonctionnement', label: 'Comment ça marche' },
-  { href: '#voyageurs', label: 'Voyageurs' },
+  { href: '#application', label: 'L’application' },
   { href: '#faq', label: 'FAQ' },
-  { href: '#contact', label: 'Contact' },
 ];
 
 export default function EnTete() {

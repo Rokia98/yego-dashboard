@@ -5,7 +5,8 @@ import { PATH_CONNEXION } from '@/lib/session';
 import BasculeTheme from './BasculeTheme';
 import Logo from './Logo';
 import Revele from './Revele';
-import { LIEN_APPEL, LIEN_WHATSAPP, TELEPHONE_AFFICHE } from './contact';
+import { LIEN_APPEL, LIEN_PLAY_STORE, LIEN_WHATSAPP, TELEPHONE_AFFICHE } from './contact';
+import { RangeeLogos } from './Paiements';
 
 const COLONNES: { titre: string; liens: { label: string; href: string; externe?: boolean }[] }[] = [
   {
@@ -13,7 +14,7 @@ const COLONNES: { titre: string; liens: { label: string; href: string; externe?:
     liens: [
       { label: 'Fonctionnalités', href: '#fonctionnalites' },
       { label: 'Comment ça marche', href: '#fonctionnement' },
-      { label: 'Côté voyageurs', href: '#voyageurs' },
+      { label: 'Moyens de paiement', href: '#paiements' },
       { label: 'Questions fréquentes', href: '#faq' },
     ],
   },
@@ -23,6 +24,14 @@ const COLONNES: { titre: string; liens: { label: string; href: string; externe?:
       { label: 'Se connecter', href: PATH_CONNEXION },
       { label: 'Devenir partenaire', href: '#contact' },
       { label: 'Parler à l’équipe', href: LIEN_WHATSAPP, externe: true },
+    ],
+  },
+  {
+    titre: 'Voyageurs',
+    liens: [
+      { label: 'Télécharger l’app', href: LIEN_PLAY_STORE, externe: true },
+      { label: 'Côté voyageurs', href: '#voyageurs' },
+      { label: 'L’application', href: '#application' },
     ],
   },
 ];
@@ -36,7 +45,7 @@ export default function PiedDePage() {
       />
 
       <div className="relative mx-auto max-w-6xl px-4 pt-16 sm:px-6 lg:pt-20">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr]">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.3fr]">
           {/* Marque */}
           <Revele className="col-span-2 lg:col-span-1">
             <Logo />
@@ -140,6 +149,10 @@ export default function PiedDePage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-ink-faint sm:flex-row sm:px-6">
           <p>© {new Date().getFullYear()} Yègo. Tous droits réservés.</p>
           <div className="flex items-center gap-3">
+            <span className="hidden text-xs md:inline">Paiements acceptés</span>
+            <div className="hidden md:block">
+              <RangeeLogos taille={26} />
+            </div>
             <BasculeTheme />
             <a
               href="#haut"

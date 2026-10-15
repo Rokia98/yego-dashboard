@@ -1,8 +1,11 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
+  Banknote,
+  Download,
   Bus,
   CheckCircle2,
   FileText,
@@ -24,6 +27,9 @@ import EnTete from '@/components/landing/EnTete';
 import PiedDePage from '@/components/landing/PiedDePage';
 import Faq, { type Question } from '@/components/landing/Faq';
 import { LIEN_APPEL, LIEN_WHATSAPP, TELEPHONE_AFFICHE } from '@/components/landing/contact';
+import { BoutonsStores, LogoPaiement, OrbitePaiements, RangeeLogos } from '@/components/landing/Paiements';
+import QrTelechargement from '@/components/landing/QrTelechargement';
+import { MOBILE_MONEY } from '@/components/landing/moyensPaiement';
 import Revele from '@/components/landing/Revele';
 import BilletInteractif from '@/components/landing/BilletInteractif';
 import GrilleProjecteur from '@/components/landing/GrilleProjecteur';
@@ -87,7 +93,12 @@ const QUESTIONS: Question[] = [
   {
     question: 'Comment les voyageurs paient-ils ?',
     reponse:
-      'Dans l’app Yègo, par Wave ou Orange Money. Au guichet, vos agents encaissent en espèces ou en Mobile Money et le billet est généré aussitôt.',
+      'Dans l’app Yègo : Wave, Orange Money, MTN MoMo, Moov Money ou Djamo. Au guichet, vos agents encaissent en espèces ou en Mobile Money (Wave, Orange, MTN, Moov) et le billet est généré aussitôt.',
+  },
+  {
+    question: 'Où télécharger l’application voyageurs ?',
+    reponse:
+      'L’application Yègo est disponible sur Google Play (Android). La version iPhone arrive bientôt sur l’App Store.',
   },
   {
     question: 'Comment je récupère l’argent des ventes en ligne ?',
@@ -129,8 +140,10 @@ export default function LandingPage() {
         </section>
 
         <Fonctionnalites />
+        <SectionPaiements />
         <Fonctionnement />
         <Voyageurs />
+        <SectionApplication />
         <QuestionsFrequentes />
         <Contact />
       </main>
@@ -200,7 +213,7 @@ function Heros() {
           </h1>
 
           <p className="lp-entree mt-6 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg" style={d(560)}>
-            Yègo réunit la vente au guichet, la réservation dans l’app, le paiement Wave &amp; Orange Money et le
+            Yègo réunit la vente au guichet, la réservation dans l’app, le paiement par Mobile Money et le
             suivi GPS de vos départs dans un seul outil — pensé pour fonctionner même en 3G.
           </p>
 
@@ -221,13 +234,20 @@ function Heros() {
           </div>
 
           <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft">
-            {['Billets QR infalsifiables', 'Wave & Orange Money', 'Suivi en temps réel'].map((t, i) => (
+            {['Billets QR infalsifiables', 'Tous les Mobile Money', 'Suivi en temps réel'].map((t, i) => (
               <li key={t} className="lp-entree flex items-center gap-1.5" style={d(820 + i * 90)}>
                 <CheckCircle2 className="h-4 w-4 text-success" />
                 {t}
               </li>
             ))}
           </ul>
+
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <span className="lp-entree text-xs font-semibold uppercase tracking-wider text-ink-faint" style={d(950)}>
+              Paiements acceptés
+            </span>
+            <RangeeLogos entree />
+          </div>
         </div>
 
         <BilletInteractif />
@@ -298,7 +318,7 @@ function Fonctionnalites() {
                 <EnTeteCarte
                   icon={Wallet}
                   titre="Mobile Money"
-                  texte="Wave et Orange Money encaissés automatiquement, ventes guichet comprises."
+                  texte="Wave, Orange Money, MTN MoMo, Moov Money et Djamo encaissés automatiquement."
                 />
                 <NotificationsPaiement />
               </Carte>
@@ -394,6 +414,15 @@ function Voyageurs() {
               </Revele>
             ))}
           </div>
+          <Revele delai={300} className="mt-8">
+            <a
+              href="#application"
+              className="lp-brillant group inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-medium text-paper shadow-card transition-transform duration-300 hover:-translate-y-0.5"
+            >
+              <Download className="h-4 w-4 transition-transform duration-300 group-hover:translate-y-0.5" />
+              Télécharger l’application
+            </a>
+          </Revele>
         </div>
         <Revele variante="zoom" delai={150}>
           <TelephoneDemo />
@@ -443,6 +472,153 @@ function Contact() {
                   {TELEPHONE_AFFICHE}
                 </a>
               </p>
+            </div>
+          </div>
+        </Revele>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ Paiements */
+
+function SectionPaiements() {
+  return (
+    <section id="paiements" className="relative scroll-mt-20 overflow-hidden border-t border-line-soft bg-surface py-20 lg:py-28">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
+        <div>
+          <TitreSection
+            aligne="gauche"
+            surtitre="Moyens de paiement"
+            titre="Vos voyageurs paient comme ils veulent"
+            texte="Chaque paiement est encaissé automatiquement et rattaché au billet. Plus besoin de vérifier les transferts à la main."
+          />
+          <ul className="mt-10 grid grid-cols-2 gap-3">
+            {MOBILE_MONEY.map((m, i) => (
+              <li key={m.nom}>
+                <Revele delai={i * 70}>
+                  <div className="group flex items-center gap-3 rounded-2xl border border-line bg-paper p-3 transition-all duration-500 hover:-translate-y-1 hover:border-accent/40 hover:shadow-card">
+                    <LogoPaiement
+                      moyen={m}
+                      taille={44}
+                      className="transition-transform duration-500 group-hover:rotate-[-6deg] group-hover:scale-110"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{m.nom}</p>
+                      <p className="mt-1 flex flex-wrap gap-1">
+                        {m.enLigne && <Etiquette>En ligne</Etiquette>}
+                        {m.guichet && <Etiquette>Guichet</Etiquette>}
+                      </p>
+                    </div>
+                  </div>
+                </Revele>
+              </li>
+            ))}
+            <li>
+              <Revele delai={MOBILE_MONEY.length * 70}>
+                <div className="group flex items-center gap-3 rounded-2xl border border-dashed border-line bg-paper p-3 transition-all duration-500 hover:-translate-y-1 hover:shadow-card">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success transition-transform duration-500 group-hover:scale-110">
+                    <Banknote className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">Espèces</p>
+                    <p className="mt-1 flex gap-1">
+                      <Etiquette>Guichet</Etiquette>
+                    </p>
+                  </div>
+                </div>
+              </Revele>
+            </li>
+          </ul>
+        </div>
+        <Revele variante="zoom" delai={150}>
+          <OrbitePaiements />
+        </Revele>
+      </div>
+    </section>
+  );
+}
+
+function Etiquette({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-ink">
+      {children}
+    </span>
+  );
+}
+
+/* ---------------------------------------------------------- Application */
+
+const ETAPES_APP = [
+  'Téléchargez Yègo sur Google Play',
+  'Créez votre compte avec votre numéro de téléphone',
+  'Réservez votre place, payez par Mobile Money et embarquez avec votre QR',
+];
+
+function SectionApplication() {
+  return (
+    <section id="application" className="scroll-mt-20 pb-20 lg:pb-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <Revele variante="zoom">
+          <div className="relative overflow-hidden rounded-[2rem] bg-[#2C3E50] text-white shadow-pop">
+            <div aria-hidden className="lp-etoiles absolute inset-0" />
+            <div
+              aria-hidden
+              className="lp-tache -right-32 -top-32 h-[460px] w-[460px] bg-[radial-gradient(circle,rgb(230_126_34/0.45),transparent_65%)]"
+              style={{ '--duree': '14s' } as CSSProperties}
+            />
+            <div
+              aria-hidden
+              className="lp-tache -bottom-40 -left-20 h-[380px] w-[380px] bg-[radial-gradient(circle,rgb(57_135_229/0.25),transparent_65%)]"
+              style={{ '--duree': '19s' } as CSSProperties}
+            />
+
+            <div className="relative grid items-center gap-12 px-6 py-14 sm:px-12 lg:grid-cols-[1.3fr_1fr] lg:py-20">
+              <div>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/landing/app-icon.png"
+                    alt="Icône de l’application Yègo"
+                    width={56}
+                    height={56}
+                    className="rounded-2xl shadow-card ring-1 ring-white/10"
+                  />
+                  <div>
+                    <p className="font-semibold">Yègo</p>
+                    <p className="text-sm text-white/60">Application voyageurs</p>
+                  </div>
+                </div>
+                <h2 className="mt-8 text-3xl font-semibold tracking-tight sm:text-5xl sm:leading-[1.08]">
+                  Votre billet de car,
+                  <span className="block text-[#F5A35C]">dans votre poche.</span>
+                </h2>
+                <ol className="mt-8 space-y-4">
+                  {ETAPES_APP.map((etape, i) => (
+                    <li key={etape} className="flex items-start gap-4">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold tabular-nums text-[#F5A35C] ring-1 ring-white/15">
+                        {i + 1}
+                      </span>
+                      <span className="pt-1 text-white/85">{etape}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-10">
+                  <BoutonsStores inverse />
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-6">
+                <div className="lp-flotte hidden flex-col items-center gap-4 lg:flex">
+                  <QrTelechargement />
+                  <p className="text-sm text-white/70">Scannez avec votre téléphone pour télécharger</p>
+                </div>
+                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 backdrop-blur">
+                  <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-white/60">
+                    Payez avec
+                  </p>
+                  <RangeeLogos taille={40} />
+                </div>
+              </div>
             </div>
           </div>
         </Revele>
