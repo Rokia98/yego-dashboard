@@ -469,3 +469,14 @@ html:has(.lp) {
     offset-distance: 60%;
   }
 }
+
+/* ---------- Pied de page : logotype ---------- */
+
+.lp-lettre {
+  transform: translate3d(0, 100%, 0);
+  transition: transform 1.2s var(--lp-ease);
+  transition-delay: var(--d, 0ms);
+}
+.est-visible .lp-lettre {
+  transform: none;
+}

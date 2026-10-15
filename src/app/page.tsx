@@ -19,10 +19,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { PATH_CONNEXION } from '@/lib/session';
-import { formatTelephone, lienWhatsApp } from '@/lib/telephone';
 import '@/components/landing/landing.css';
 import EnTete from '@/components/landing/EnTete';
-import Logo from '@/components/landing/Logo';
+import PiedDePage from '@/components/landing/PiedDePage';
+import Faq, { type Question } from '@/components/landing/Faq';
+import { LIEN_APPEL, LIEN_WHATSAPP, TELEPHONE_AFFICHE } from '@/components/landing/contact';
 import Revele from '@/components/landing/Revele';
 import BilletInteractif from '@/components/landing/BilletInteractif';
 import GrilleProjecteur from '@/components/landing/GrilleProjecteur';
@@ -43,12 +44,6 @@ export const metadata: Metadata = {
   description:
     'Vente en ligne et au guichet, billets QR, suivi GPS des départs et paiement Mobile Money pour les compagnies de transport.',
 };
-
-const WHATSAPP_PARTENAIRES = '0798496595';
-const LIEN_WHATSAPP = lienWhatsApp(
-  WHATSAPP_PARTENAIRES,
-  'Bonjour Yègo, je souhaite inscrire ma compagnie de transport sur la plateforme.',
-);
 
 const ETAPES = [
   {
@@ -83,13 +78,46 @@ const CONFIANCE: { icon: LucideIcon; titre: string; texte: string }[] = [
   { icon: MapPin, titre: 'Retards annoncés', texte: 'Le voyageur est prévenu en cas de décalage.' },
 ];
 
+const QUESTIONS: Question[] = [
+  {
+    question: 'Faut-il acheter du matériel ?',
+    reponse:
+      'Non. Un ordinateur ou un téléphone connecté suffit pour vendre au guichet ; une imprimante permet en plus de remettre un billet papier. Le dashboard est conçu pour rester léger, même en 3G.',
+  },
+  {
+    question: 'Comment les voyageurs paient-ils ?',
+    reponse:
+      'Dans l’app Yègo, par Wave ou Orange Money. Au guichet, vos agents encaissent en espèces ou en Mobile Money et le billet est généré aussitôt.',
+  },
+  {
+    question: 'Comment je récupère l’argent des ventes en ligne ?',
+    reponse:
+      'Votre solde est visible à tout moment dans votre espace. Vous faites une demande de reversement du montant voulu, l’équipe Yègo la valide et vous remet les fonds.',
+  },
+  {
+    question: 'Mes agents de guichet peuvent-ils avoir leur propre accès ?',
+    reponse:
+      'Oui. Le gestionnaire de la compagnie crée un compte par agent. Chaque agent vend et gère les départs, sans accès aux réglages ni aux finances de la compagnie.',
+  },
+  {
+    question: 'Que se passe-t-il si un voyageur annule ?',
+    reponse:
+      'L’annulation suit un barème de remboursement clair. Les remboursements sont suivis depuis votre espace, par transfert Mobile Money ou constat manuel.',
+  },
+  {
+    question: 'Combien ça coûte ?',
+    reponse:
+      'Yègo fonctionne par abonnement pour la compagnie. Écrivez-nous sur WhatsApp : nous vous présentons l’offre adaptée à la taille de votre réseau.',
+  },
+];
+
 const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
 
 export default function LandingPage() {
   return (
-    <div className="lp min-h-screen bg-paper text-ink">
+    <div id="haut" className="lp min-h-screen bg-paper text-ink">
       {/* Sans JavaScript, les blocs « Revele » restent visibles. */}
-      <noscript dangerouslySetInnerHTML={{ __html: '<style>.lp-revele{opacity:1!important;transform:none!important}</style>' }} />
+      <noscript dangerouslySetInnerHTML={{ __html: '<style>.lp-revele,.lp-lettre{opacity:1!important;transform:none!important}</style>' }} />
 
       <EnTete />
 
@@ -103,6 +131,7 @@ export default function LandingPage() {
         <Fonctionnalites />
         <Fonctionnement />
         <Voyageurs />
+        <QuestionsFrequentes />
         <Contact />
       </main>
 
@@ -395,9 +424,8 @@ function Contact() {
                   href={LIEN_WHATSAPP}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative inline-flex items-center justify-center gap-2.5 rounded-2xl bg-white px-7 py-4 text-base font-semibold text-accent-ink shadow-card transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.02]"
+                  className="lp-brillant group relative inline-flex items-center justify-center gap-2.5 rounded-2xl bg-white px-7 py-4 text-base font-semibold text-[#b5610f] shadow-card transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.02]"
                 >
-                  <span aria-hidden className="lp-pulsation bg-white/60" />
                   <MessageCircle className="relative h-5 w-5 text-[#25D366]" />
                   <span className="relative">Discuter sur WhatsApp</span>
                   <ArrowRight className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -411,8 +439,8 @@ function Contact() {
               </div>
               <p className="mt-6 text-sm tabular-nums text-white/75">
                 ou appelez le{' '}
-                <a href={`tel:+225${WHATSAPP_PARTENAIRES}`} className="font-medium text-white underline-offset-4 hover:underline">
-                  {formatTelephone(WHATSAPP_PARTENAIRES)}
+                <a href={LIEN_APPEL} className="font-medium text-white underline-offset-4 hover:underline">
+                  {TELEPHONE_AFFICHE}
                 </a>
               </p>
             </div>
@@ -423,25 +451,36 @@ function Contact() {
   );
 }
 
-/* ---------------------------------------------------------- Pied de page */
+/* ------------------------------------------------------------------ FAQ */
 
-function PiedDePage() {
+function QuestionsFrequentes() {
   return (
-    <footer className="border-t border-line-soft bg-surface">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-4 py-10 text-sm text-ink-faint sm:flex-row sm:px-6">
-        <Logo />
-        <a
-          href={LIEN_WHATSAPP}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 tabular-nums transition-colors hover:text-ink"
-        >
-          <MessageCircle className="h-4 w-4 text-[#25D366]" />
-          {formatTelephone(WHATSAPP_PARTENAIRES)}
-        </a>
-        <p>© {new Date().getFullYear()} Yègo. Tous droits réservés.</p>
+    <section id="faq" className="scroll-mt-20 border-t border-line-soft py-20 lg:py-28">
+      <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+        <div className="lg:sticky lg:top-32 lg:self-start">
+          <TitreSection
+            aligne="gauche"
+            surtitre="Questions fréquentes"
+            titre="Vous vous posez des questions ?"
+            texte="Les réponses aux questions que nous posent le plus souvent les compagnies."
+          />
+          <Revele delai={200} className="mt-8">
+            <a
+              href={LIEN_WHATSAPP}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40"
+            >
+              <MessageCircle className="h-4 w-4 text-[#25D366]" />
+              Une autre question ? Écrivez-nous
+            </a>
+          </Revele>
+        </div>
+        <Revele delai={120}>
+          <Faq questions={QUESTIONS} />
+        </Revele>
       </div>
-    </footer>
+    </section>
   );
 }
 

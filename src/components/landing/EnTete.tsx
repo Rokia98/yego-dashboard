@@ -10,6 +10,7 @@ const LIENS = [
   { href: '#fonctionnalites', label: 'Fonctionnalités' },
   { href: '#fonctionnement', label: 'Comment ça marche' },
   { href: '#voyageurs', label: 'Voyageurs' },
+  { href: '#faq', label: 'FAQ' },
   { href: '#contact', label: 'Contact' },
 ];
 
