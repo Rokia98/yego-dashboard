@@ -74,10 +74,17 @@ export function ActionsRemboursement({
   r,
   enCours,
   onConfirmer,
+  manuelSurJeko = true,
 }: {
   r: Remboursement;
   enCours: boolean;
   onConfirmer: (r: Remboursement, mode?: ModeRemboursement) => void;
+  /**
+   * Constat manuel proposé même quand le transfert Jèko est possible. API 0.30.1+ :
+   * réservé à l'admin plateforme, le company_admin reçoit un 403 sur un billet payé
+   * via Jèko et pas encore reversé.
+   */
+  manuelSurJeko?: boolean;
 }) {
   if (r.statut === 'en_cours') {
     return <span className="text-xs text-ink-faint">Attente opérateur…</span>;
@@ -107,13 +114,19 @@ export function ActionsRemboursement({
       <Button variant="link-success" onClick={() => onConfirmer(r)}>
         {r.statut === 'echoue' ? 'Relancer le transfert' : 'Rembourser via Mobile Money'}
       </Button>
-      <button
-        type="button"
-        onClick={() => onConfirmer(r, 'manuel')}
-        className="text-[11px] text-ink-faint hover:text-ink hover:underline"
-      >
-        Marquer comme remboursé manuellement
-      </button>
+      {manuelSurJeko ? (
+        <button
+          type="button"
+          onClick={() => onConfirmer(r, 'manuel')}
+          className="text-[11px] text-ink-faint hover:text-ink hover:underline"
+        >
+          Marquer comme remboursé manuellement
+        </button>
+      ) : (
+        <span className="max-w-[14rem] text-[11px] text-ink-faint">
+          Payé en ligne : remboursement manuel via l’équipe Yègo.
+        </span>
+      )}
     </div>
   );
 }

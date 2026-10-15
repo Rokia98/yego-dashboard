@@ -63,13 +63,22 @@ async function appelerRefresh(): Promise<string | null> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return sessionDUnAutreOnglet(refreshToken);
     const data = (await res.json()) as { accessToken: string; refreshToken: string };
     ecrireSession(data.accessToken, data.refreshToken);
     return data.accessToken;
   } catch {
     return null;
   }
+}
+
+// API 0.30.1+ : un refresh token déjà consommé répond 401. Si un autre onglet
+// a gagné la course, il a écrit une nouvelle session dans le stockage partagé :
+// on la reprend au lieu de déconnecter l'utilisateur.
+function sessionDUnAutreOnglet(refreshEnvoye: string): string | null {
+  if (lireRefreshToken() === refreshEnvoye) return null;
+  const token = lireAccessToken();
+  return token && !jetonExpire(token) ? token : null;
 }
 
 export function rafraichirAccessToken(): Promise<string | null> {

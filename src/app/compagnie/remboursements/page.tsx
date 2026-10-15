@@ -150,7 +150,12 @@ export default function RemboursementsPage() {
                       <StatutRemboursement r={r} />
                     </Td>
                     <Td>
-                      <ActionsRemboursement r={r} enCours={enCours === r.id} onConfirmer={handleConfirmer} />
+                      <ActionsRemboursement
+                        r={r}
+                        enCours={enCours === r.id}
+                        onConfirmer={handleConfirmer}
+                        manuelSurJeko={false}
+                      />
                     </Td>
                   </Tr>
                 ))}

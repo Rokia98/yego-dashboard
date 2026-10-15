@@ -39,7 +39,8 @@ src/
       departs/page.tsx             -> planning, démarrage GPS, signalement de retard
       departs/[id]/suivi/page.tsx  -> carte de suivi temps réel (polling)
       reservations/page.tsx        -> liste (filtre statut sur les lignes chargées), annulation, encaissement guichet
-      remboursements/page.tsx      -> remboursement des voyageurs : transfert Jèko ou constat manuel (company_admin)
+      remboursements/page.tsx      -> remboursement des voyageurs : transfert Jèko, ou constat manuel si le billet
+                                      n'a pas été payé via Jèko / déjà reversé (company_admin ; API 0.30.1)
       reversements/page.tsx        -> « Mes reversements » : aperçu à venir, historique, compte Mobile Money (company_admin)
       controles/page.tsx           -> journal des scans de tickets (lecture seule)
       flotte/page.tsx              -> véhicules + chauffeurs
