@@ -18,6 +18,22 @@ function redirigerVersConnexion() {
   }
 }
 
+/** Erreur HTTP de l'API : statut et `code` métier éventuel (ex. CONNEXION_BLOQUEE). */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+function erreurApi(res: Response, corps: unknown): ApiError {
+  const code =
+    corps && typeof corps === 'object' && typeof (corps as { code?: unknown }).code === 'string'
+      ? (corps as { code: string }).code
+      : undefined;
+  return new ApiError(messageErreur(corps), res.status, code);
+}
+
 function messageErreur(corps: unknown): string {
   if (corps && typeof corps === 'object' && 'message' in corps) {
     const m = (corps as { message: unknown }).message;
@@ -83,7 +99,7 @@ export async function apiFetch<T = unknown>(path: string, options: RequestInit =
 
   if (!res.ok) {
     const corps = await res.json().catch(() => null);
-    throw new Error(messageErreur(corps));
+    throw erreurApi(res, corps);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -100,7 +116,7 @@ export async function apiFetchAvecTotal<T = unknown>(path: string): Promise<{ it
 
   if (!res.ok) {
     const corps = await res.json().catch(() => null);
-    throw new Error(messageErreur(corps));
+    throw erreurApi(res, corps);
   }
   const brut = res.headers.get('X-Total-Count');
   const total = brut != null && brut !== '' && Number.isFinite(Number(brut)) ? Number(brut) : null;
@@ -115,7 +131,7 @@ export async function apiUpload<T = unknown>(path: string, formData: FormData): 
 
   if (!res.ok) {
     const corps = await res.json().catch(() => null);
-    throw new Error(messageErreur(corps));
+    throw erreurApi(res, corps);
   }
   return res.json();
 }
@@ -128,7 +144,7 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
 
   if (!res.ok) {
     const corps = await res.json().catch(() => null);
-    throw new Error(messageErreur(corps));
+    throw erreurApi(res, corps);
   }
   return res.blob();
 }

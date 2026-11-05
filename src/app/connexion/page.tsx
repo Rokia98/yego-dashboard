@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/http';
+import { ApiError, apiFetch } from '@/lib/http';
 import { chargerUtilisateur, homeForRole, revoquerRefreshToken, saveSession, type UserRole } from '@/lib/auth';
 import { Field, Input } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
@@ -49,7 +49,12 @@ export default function LoginPage() {
       saveSession(data.accessToken, data.refreshToken);
       router.push(homeForRole(data.role));
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : 'Erreur de connexion');
+      // API 0.30.2 : 5 échecs en 15 min sur un même numéro -> blocage 15 min.
+      if (err instanceof ApiError && (err.code === 'CONNEXION_BLOQUEE' || err.status === 429)) {
+        setErreur('Trop de tentatives de connexion sur ce numéro. Réessayez dans 15 minutes.');
+      } else {
+        setErreur(err instanceof Error ? err.message : 'Erreur de connexion');
+      }
     } finally {
       setChargement(false);
     }

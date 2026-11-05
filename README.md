@@ -274,23 +274,29 @@ ouverte → en_cours → resolue / fermee, priorité, `GET /support/compteurs`).
 Tant que `MODULE_SUPPORT` vaut `false` (`lib/capacites.ts`), les pages affichent un
 message d'attente et n'appellent pas l'API.
 
-## Déploiement (Vercel)
+## Déploiement (VPS, PM2 + Nginx)
 
-1. Le dépôt GitHub doit être à jour (branche `main`).
-2. Sur vercel.com : **Add New → Project** → importer `yego-dashboard`. Le framework Next.js est
-   détecté : garder les commandes par défaut (`npm run build`, Node ≥ 20.9).
-3. **Environment Variables** (Production) :
-   `NEXT_PUBLIC_API_URL = https://yego-api.onrender.com/api/v1` — URL complète, préfixe `/api/v1`
-   inclus (le client ne l'ajoute pas). Le build échoue volontairement si elle manque.
-   Variable `NEXT_PUBLIC_*` : elle est figée au build, toute modification impose un redéploiement.
-4. **Deploy**, puis ajouter l'URL obtenue (`https://<projet>.vercel.app`, et le domaine perso
-   éventuel) à `CORS_ORIGIN` de l'API sur Render — sans slash final. Sans cela, la connexion
-   échoue (« Failed to fetch »).
+Production : `https://app.13-140-219-80.sslip.io`, sur le même VPS que l'API
+(`https://api.13-140-219-80.sslip.io`, PM2 `yego-api` sur `127.0.0.1:3000`).
+Le dashboard tourne sous PM2 (`yego-dashboard`) sur `127.0.0.1:3001`, derrière Nginx + Certbot.
 
-Les déploiements *preview* ont une URL différente à chaque fois : ils sont refusés par CORS.
-Tester sur l'URL de production. Les jetons sont stockés en `localStorage` et envoyés en
-`Authorization: Bearer` : aucun cookie inter-domaines n'est nécessaire. L'URL de l'API est aussi
-autorisée dans la CSP (`connect-src`, cf. `next.config.js`).
+L'URL de l'API n'existe qu'à un seul endroit : `NEXT_PUBLIC_API_URL`, dans `~/yego-dashboard/.env.production.local`
+sur le serveur (URL complète, préfixe `/api/v1` inclus). Variable `NEXT_PUBLIC_*` : **figée au build**,
+toute modification impose `npm run build` puis `pm2 restart yego-dashboard`. Le build échoue
+volontairement si elle manque. Elle est aussi autorisée dans la CSP (`connect-src`, cf. `next.config.js`).
+
+`CORS_ORIGIN` de l'API doit contenir `https://app.13-140-219-80.sslip.io` (sans slash final),
+sinon la connexion échoue (« Failed to fetch »). Les jetons sont envoyés en `Authorization: Bearer` :
+aucun cookie inter-domaines n'est nécessaire.
+
+Mise à jour après un push sur `main` :
+
+```bash
+cd ~/yego-dashboard && git pull && npm ci && npm run build && pm2 restart yego-dashboard
+```
+
+Quand le vrai nom de domaine arrivera : changer `NEXT_PUBLIC_API_URL`, rebuild, nouveau
+`server_name` Nginx + certbot, et mettre à jour `CORS_ORIGIN` de l'API.
 
 ## Sécurité
 
