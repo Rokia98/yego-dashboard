@@ -8,6 +8,7 @@ import { Field, Select } from '@/components/ui/Field';
 import { documentsApi, LABELS_TYPE_DOCUMENT, TAILLE_MAX_OCTETS, TYPES_MIME_ACCEPTES } from '@/features/documents';
 import type { CompagnieDocument, TypeDocument } from '@/features/documents';
 import { formatDateHeure, formatTaille } from '@/lib/format';
+import { useConfirmer, useDemander, useNotifier } from '@/components/ui/Dialogues';
 
 const BADGE_TONE: Record<CompagnieDocument['statut'], 'success' | 'warning' | 'danger'> = {
   en_attente: 'warning',
@@ -36,6 +37,9 @@ type DocumentsPanelProps = {
 };
 
 export default function DocumentsPanel({ compagnieId, peutTeleverser = false, peutModerer = false }: DocumentsPanelProps) {
+  const confirmer = useConfirmer();
+  const demander = useDemander();
+  const notifier = useNotifier();
   const [documents, setDocuments] = useState<CompagnieDocument[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -104,34 +108,55 @@ export default function DocumentsPanel({ compagnieId, peutTeleverser = false, pe
       }
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Impossible d'ouvrir le document");
+      notifier.erreur(err, "Impossible d'ouvrir le document");
     } finally {
       setOuverture(null);
     }
   }
 
   async function handleSupprimer(doc: CompagnieDocument) {
-    if (!confirm(`Supprimer « ${LABELS_TYPE_DOCUMENT[doc.type]} » ?`)) return;
+    if (
+      !(await confirmer({
+        titre: `Supprimer « ${LABELS_TYPE_DOCUMENT[doc.type]} » ?`,
+        message: 'Le fichier sera définitivement retiré du dossier de la compagnie.',
+        libelleConfirmer: 'Supprimer',
+        ton: 'danger',
+      }))
+    )
+      return;
     setEnCours(doc.id);
     try {
       await documentsApi.supprimer(compagnieId, doc.id);
       setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+      notifier.succes('Document supprimé.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+      notifier.erreur(err, 'Erreur lors de la suppression');
     } finally {
       setEnCours(null);
     }
   }
 
   async function handleModerer(doc: CompagnieDocument, statut: 'valide' | 'refuse') {
-    const commentaireAdmin =
-      statut === 'refuse' ? prompt('Motif du refus (optionnel) :') ?? undefined : undefined;
+    let commentaireAdmin: string | undefined;
+    if (statut === 'refuse') {
+      const motif = await demander({
+        titre: `Refuser « ${LABELS_TYPE_DOCUMENT[doc.type]} » ?`,
+        label: 'Motif du refus (optionnel, transmis à la compagnie)',
+        placeholder: 'Document illisible, expiré…',
+        multiligne: true,
+        libelleConfirmer: 'Refuser le document',
+        ton: 'danger',
+      });
+      if (motif == null) return;
+      commentaireAdmin = motif || undefined;
+    }
     setEnCours(doc.id);
     try {
       const maj = await documentsApi.moderer(compagnieId, doc.id, statut, commentaireAdmin);
       setDocuments((prev) => prev.map((d) => (d.id === doc.id ? maj : d)));
+      notifier.succes(statut === 'valide' ? 'Document validé.' : 'Document refusé.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la revue');
+      notifier.erreur(err, 'Erreur lors de la revue');
     } finally {
       setEnCours(null);
     }

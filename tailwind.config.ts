@@ -39,6 +39,7 @@ const config: Config = {
           1: withAlpha('--chart-1'),
           2: withAlpha('--chart-2'),
           3: withAlpha('--chart-3'),
+          4: withAlpha('--chart-4'),
           grid: withAlpha('--chart-grid'),
           axis: withAlpha('--chart-axis'),
         },

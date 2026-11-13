@@ -14,6 +14,7 @@ import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import BientotDisponible from '@/components/ui/BientotDisponible';
 import Modal, { PiedModal } from '@/components/ui/Modal';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 import {
   retraitsApi,
   LIBELLE_STATUT_REVERSEMENT,
@@ -62,6 +63,8 @@ function Ligne({ label, valeur, fort = false }: { label: string; valeur: string;
 export default function AdminRetraitsPage() {
   const { user, ready } = useAuthGuard(['admin']);
   const actif = JEKO && DEMANDES_REVERSEMENT;
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
   const [apercu, setApercu] = useState<ApercuRetrait | null>(null);
   const [erreurApercu, setErreurApercu] = useState<string | null>(null);
   const [montant, setMontant] = useState('');
@@ -113,7 +116,15 @@ export default function AdminRetraitsPage() {
     if (m > plafond) return setErreurForm(`Maximum ${formatFcfa(plafond)} pour ce retrait.`);
     if (!motDePasse) return setErreurForm('Saisissez votre mot de passe pour confirmer.');
     if (!apercu?.beneficiaire) return;
-    if (!confirm(`Retirer ${formatFcfa(m)} vers ${libelleMoyen(moyen)} ${formatTelephone(apercu.beneficiaire)} ?`)) return;
+    if (
+      !(await confirmer({
+        titre: `Retirer ${formatFcfa(m)} ?`,
+        message: `Vers ${libelleMoyen(moyen)} ${formatTelephone(apercu.beneficiaire)}.`,
+        libelleConfirmer: 'Retirer',
+        ton: 'warning',
+      }))
+    )
+      return;
 
     setEnvoi(true);
     try {
@@ -121,7 +132,7 @@ export default function AdminRetraitsPage() {
       setMontant('');
       setMotDePasse('');
       setFormulaireOuvert(false);
-      alert(
+      (r.statut === 'echoue' ? notifier.erreur : notifier.succes)(
         r.statut === 'effectue'
           ? `Retrait #${r.id} effectué (${formatFcfa(r.montant)}).`
           : r.statut === 'echoue'

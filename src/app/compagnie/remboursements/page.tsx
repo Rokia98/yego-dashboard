@@ -4,13 +4,14 @@ import { useCallback, useMemo, useState } from 'react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
+import { Table, THead, Th, ThActions, Tr, Td, TdActions, TableMessage } from '@/components/ui/Table';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 import { FiltresBar, FiltreRecherche, FiltreSegments } from '@/components/ui/Filtres';
 import {
   ActionsRemboursement,
   StatutRemboursement,
   OPTIONS_STATUT_REMBOURSEMENT,
-  demanderConfirmation,
+  confirmationRemboursement,
   estATraiter,
   type FiltreStatutRemboursement,
 } from '@/components/remboursements/ActionsRemboursement';
@@ -44,6 +45,8 @@ function correspond(r: Remboursement, q: string): boolean {
 export default function RemboursementsPage() {
   const { user, ready } = useAuthGuard(['company_admin']);
   const [enCours, setEnCours] = useState<number | null>(null);
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
   const filtres = useFiltres<Filtres>(DEFAUTS, 'q');
   const filtre = filtres.appliques.statut;
   const q = filtres.appliques.q;
@@ -59,13 +62,14 @@ export default function RemboursementsPage() {
   const liste = usePagedList<Remboursement>(fetcher, ready ? filtres.cle : 'wait', 20, { filtreLocal });
 
   async function handleConfirmer(r: Remboursement, mode?: ModeRemboursement) {
-    if (!demanderConfirmation(r, mode)) return;
+    if (!(await confirmer(confirmationRemboursement(r, mode)))) return;
     setEnCours(r.id);
     try {
       const maj = await remboursementsApi.confirmer(r.id, mode);
       liste.fusionner((x) => x.id === r.id, { ...r, ...maj });
+      notifier.succes(maj.statut === 'en_cours' ? 'Transfert lancé : en attente de l’opérateur.' : 'Remboursement enregistré.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la confirmation');
+      notifier.erreur(err, 'Erreur lors de la confirmation');
     } finally {
       setEnCours(null);
     }
@@ -128,10 +132,10 @@ export default function RemboursementsPage() {
                 <Th>Réservation</Th>
                 <Th>Voyageur</Th>
                 <Th>Demandé le</Th>
-                <Th>Frais retenus</Th>
-                <Th>À rembourser</Th>
+                <Th align="right">Frais retenus</Th>
+                <Th align="right">À rembourser</Th>
                 <Th>Statut</Th>
-                <Th>Action</Th>
+                <ThActions />
               </THead>
               <tbody>
                 {liste.pageItems.map((r) => (
@@ -144,19 +148,19 @@ export default function RemboursementsPage() {
                     </Td>
                     <Td>{nomBeneficiaire(r)}</Td>
                     <Td>{formatDate(r.dateDemande)}</Td>
-                    <Td className="tabular-nums">{formatFcfa(r.fraisRetenus)}</Td>
-                    <Td className="tabular-nums font-medium text-accent-ink">{formatFcfa(r.montantRembourse)}</Td>
+                    <Td align="right" className="whitespace-nowrap tabular-nums">{formatFcfa(r.fraisRetenus)}</Td>
+                    <Td align="right" className="whitespace-nowrap tabular-nums font-semibold text-accent-ink">{formatFcfa(r.montantRembourse)}</Td>
                     <Td>
                       <StatutRemboursement r={r} />
                     </Td>
-                    <Td>
+                    <TdActions>
                       <ActionsRemboursement
                         r={r}
                         enCours={enCours === r.id}
                         onConfirmer={handleConfirmer}
                         manuelSurJeko={false}
                       />
-                    </Td>
+                    </TdActions>
                   </Tr>
                 ))}
               </tbody>

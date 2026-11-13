@@ -86,15 +86,12 @@ export default function Sidebar({ groups, title, userLabel }: SidebarProps) {
                     aria-current={active ? 'page' : undefined}
                     className={`group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-colors ${
                       active
-                        ? 'bg-accent-soft font-medium text-accent-ink'
-                        : 'text-ink-soft hover:bg-surface-2 hover:text-ink'
+                        ? 'bg-gradient-to-r from-accent to-[rgb(var(--accent)/0.82)] font-semibold text-white shadow-[0_6px_16px_-8px_rgb(var(--accent)/0.8)]'
+                        : 'text-ink-soft hover:bg-accent-soft/60 hover:text-accent-ink'
                     }`}
                   >
-                    {active && (
-                      <span className="absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-accent" />
-                    )}
                     <Icon
-                      className={`h-4 w-4 shrink-0 ${active ? 'text-accent' : 'text-ink-faint group-hover:text-ink-soft'}`}
+                      className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-ink-faint group-hover:text-accent-ink'}`}
                       strokeWidth={1.75}
                     />
                     {item.label}

@@ -1,19 +1,21 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Plus, Upload } from 'lucide-react';
+import { Building2, CheckCircle2, Clock, FileText, Pencil, PauseCircle, Plus, Upload, UserCog } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
+import { Table, THead, Th, ThActions, Tr, Td, TdActions, TableMessage } from '@/components/ui/Table';
+import { Actions, ActionIcone, MenuActions } from '@/components/ui/Actions';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 import { Field, Input } from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { ListePaginee } from '@/components/ui/Pagination';
 import DocumentsPanel from '@/components/documents/DocumentsPanel';
 import CompteGestionnaire from '@/components/compagnies/CompteGestionnaire';
-import Modal from '@/components/ui/Modal';
+import Modal, { ErreurFormulaire, PiedModal } from '@/components/ui/Modal';
 import { FiltresBar, FiltreRecherche, FiltreSegments } from '@/components/ui/Filtres';
 import { normaliser, useFiltres } from '@/lib/filtres';
 import { compagniesApi } from '@/features/compagnies';
@@ -30,6 +32,12 @@ const BADGE_TONE = {
   actif: 'success',
   en_attente: 'warning',
   suspendu: 'danger',
+} as const;
+
+const LIBELLE_STATUT = {
+  actif: 'Active',
+  en_attente: 'À valider',
+  suspendu: 'Suspendue',
 } as const;
 
 const CHAMPS_VIDES = {
@@ -51,6 +59,10 @@ export default function AdminCompagniesPage() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
+  const [erreurEdit, setErreurEdit] = useState<string | null>(null);
+  const [envoiEdit, setEnvoiEdit] = useState(false);
   const [edite, setEdite] = useState<number | null>(null);
   const [champsEdit, setChampsEdit] = useState({ nom: '', telephone: '', email: '' });
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
@@ -121,25 +133,48 @@ export default function AdminCompagniesPage() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
-  async function handleStatut(id: number, statut: 'actif' | 'suspendu' | 'en_attente') {
+  async function handleStatut(c: Compagnie, statut: 'actif' | 'suspendu' | 'en_attente') {
+    const id = c.id;
+    if (
+      statut === 'suspendu' &&
+      !(await confirmer({
+        titre: `Suspendre ${c.nom} ?`,
+        message: 'Ses trajets ne seront plus proposés à la vente tant qu’elle reste suspendue.',
+        libelleConfirmer: 'Suspendre',
+        ton: 'danger',
+      }))
+    )
+      return;
     setEnCours(id);
     try {
       await compagniesApi.updateStatut(id, statut);
       await charger();
+      notifier.succes(
+        statut === 'actif' ? `${c.nom} est activée.` : statut === 'suspendu' ? `${c.nom} est suspendue.` : `${c.nom} est remise en attente.`,
+      );
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors du changement de statut');
+      notifier.erreur(err, 'Erreur lors du changement de statut');
     } finally {
       setEnCours(null);
     }
   }
 
   function ouvrirEdition(c: Compagnie) {
+    setErreurEdit(null);
     setEdite(c.id);
     setChampsEdit({ nom: c.nom, telephone: chiffresTelephone(c.telephone ?? ''), email: c.email ?? '' });
   }
 
-  async function enregistrerEdition(id: number) {
-    setEnCours(id);
+  async function enregistrerEdition(e: React.FormEvent) {
+    e.preventDefault();
+    if (edite == null) return;
+    const id = edite;
+    setErreurEdit(null);
+    if (champsEdit.telephone && !estTelephoneValide(champsEdit.telephone)) {
+      setErreurEdit('Le téléphone (WhatsApp) doit comporter 10 chiffres.');
+      return;
+    }
+    setEnvoiEdit(true);
     try {
       await compagniesApi.update(id, {
         nom: champsEdit.nom,
@@ -148,10 +183,11 @@ export default function AdminCompagniesPage() {
       });
       setEdite(null);
       await charger();
+      notifier.succes(`${champsEdit.nom} mise à jour.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+      setErreurEdit(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
     } finally {
-      setEnCours(null);
+      setEnvoiEdit(false);
     }
   }
 
@@ -205,6 +241,7 @@ export default function AdminCompagniesPage() {
 
       <Modal
         ouvert={formulaireOuvert}
+        icone={Building2}
         titre="Créer une compagnie"
         sousTitre="Le compte gestionnaire se crée ensuite ; ses identifiants partent par WhatsApp."
         onFermer={envoi ? undefined : fermerFormulaire}
@@ -262,15 +299,41 @@ export default function AdminCompagniesPage() {
             </div>
           </div>
 
-          {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
-          <div className="mt-5 flex justify-end gap-2 border-t border-line-soft pt-4">
-            <Button variant="ghost" onClick={fermerFormulaire} disabled={envoi}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={envoi}>
-              {envoi ? 'Création...' : 'Créer la compagnie'}
-            </Button>
+          <ErreurFormulaire>{erreur}</ErreurFormulaire>
+          <PiedModal envoi={envoi} libelle="Créer la compagnie" libelleEnvoi="Création…" onAnnuler={fermerFormulaire} />
+        </form>
+      </Modal>
+
+      <Modal
+        ouvert={edite != null}
+        icone={Building2}
+        titre="Modifier la compagnie"
+        sousTitre={compagnies.find((c) => c.id === edite)?.nom}
+        onFermer={envoiEdit ? undefined : () => setEdite(null)}
+      >
+        <form onSubmit={enregistrerEdition}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Field label="Nom">
+                <Input required value={champsEdit.nom} onChange={(e) => setChampsEdit({ ...champsEdit, nom: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="Téléphone WhatsApp (10 chiffres)">
+              <Input
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="0701020304"
+                value={champsEdit.telephone}
+                onChange={(e) => setChampsEdit({ ...champsEdit, telephone: chiffresTelephone(e.target.value) })}
+              />
+            </Field>
+            <Field label="Email">
+              <Input type="email" value={champsEdit.email} onChange={(e) => setChampsEdit({ ...champsEdit, email: e.target.value })} />
+            </Field>
           </div>
+          <ErreurFormulaire>{erreurEdit}</ErreurFormulaire>
+          <PiedModal envoi={envoiEdit} libelle="Enregistrer" onAnnuler={() => setEdite(null)} />
         </form>
       </Modal>
 
@@ -326,105 +389,72 @@ export default function AdminCompagniesPage() {
           <Table minWidth="880px">
             <THead>
               <Th>Compagnie</Th>
-              <Th>Contact</Th>
+              <Th>Téléphone</Th>
               <Th>Créée le</Th>
               <Th>Abonnement</Th>
               <Th>Statut</Th>
-              <Th>Action</Th>
+              <ThActions />
             </THead>
             <tbody>
               {page.map((c) => (
                 <Fragment key={c.id}>
-                <Tr>
-                  {edite === c.id ? (
-                    <>
-                      <Td>
-                        <Input value={champsEdit.nom} onChange={(e) => setChampsEdit({ ...champsEdit, nom: e.target.value })} className="!py-1 !text-xs" />
-                      </Td>
-                      <Td>
-                        <Input
-                          value={champsEdit.telephone}
-                          onChange={(e) => setChampsEdit({ ...champsEdit, telephone: chiffresTelephone(e.target.value) })}
-                          className="!py-1 !text-xs"
-                          maxLength={10}
+                <Tr attenue={c.statut === 'suspendu'} className={docsOuverts === c.id ? 'bg-accent-soft/40' : ''}>
+                  <Td strong>
+                    <span className="flex items-center gap-2.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-gradient-to-br from-accent-soft to-surface text-[11px] font-bold text-accent-ink">
+                        {c.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.logoUrl} alt="" className="h-full w-full bg-surface object-contain" />
+                        ) : (
+                          c.nom.slice(0, 2).toUpperCase()
+                        )}
+                      </span>
+                      <span>
+                        {c.nom}
+                        {c.email && <span className="block text-xs font-normal text-ink-faint">{c.email}</span>}
+                      </span>
+                    </span>
+                  </Td>
+                  <Td className="whitespace-nowrap">{c.telephone ? formatTelephone(c.telephone) : '—'}</Td>
+                  <Td className="whitespace-nowrap">{formatDate(c.dateCreation)}</Td>
+                  <Td>
+                    <Badge tone={abonnementActif(c.id) ? 'success' : 'warning'}>
+                      {abonnementActif(c.id) ? 'Actif' : 'Aucun'}
+                    </Badge>
+                  </Td>
+                  <Td>
+                    <Badge tone={BADGE_TONE[c.statut]}>{LIBELLE_STATUT[c.statut]}</Badge>
+                  </Td>
+                  <TdActions>
+                    <Actions>
+                      {c.statut === 'en_attente' && (
+                        <ActionIcone
+                          icone={CheckCircle2}
+                          label="Valider et activer"
+                          ton="success"
+                          chargement={enCours === c.id}
+                          onClick={() => handleStatut(c, 'actif')}
                         />
-                      </Td>
-                      <Td colSpan={2}>
-                        <Input value={champsEdit.email} onChange={(e) => setChampsEdit({ ...champsEdit, email: e.target.value })} className="!py-1 !text-xs" placeholder="email" />
-                      </Td>
-                      <Td>
-                        <Badge tone={BADGE_TONE[c.statut]}>{c.statut.replace('_', ' ')}</Badge>
-                      </Td>
-                      <Td>
-                        <div className="flex gap-3">
-                          <Button variant="link-success" onClick={() => enregistrerEdition(c.id)} disabled={enCours === c.id}>
-                            Enregistrer
-                          </Button>
-                          <button onClick={() => setEdite(null)} className="text-xs text-ink-faint hover:underline">
-                            Annuler
-                          </button>
-                        </div>
-                      </Td>
-                    </>
-                  ) : (
-                    <>
-                      <Td strong>
-                        <span className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-surface-2 text-[10px] font-semibold text-ink-faint">
-                            {c.logoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={c.logoUrl} alt="" className="h-full w-full object-contain" />
-                            ) : (
-                              c.nom.slice(0, 2).toUpperCase()
-                            )}
-                          </span>
-                          {c.nom}
-                        </span>
-                      </Td>
-                      <Td className="whitespace-nowrap">{c.telephone ? formatTelephone(c.telephone) : c.email || '—'}</Td>
-                      <Td>{formatDate(c.dateCreation)}</Td>
-                      <Td>
-                        <Badge tone={abonnementActif(c.id) ? 'success' : 'warning'}>
-                          {abonnementActif(c.id) ? 'actif' : 'aucun'}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <Badge tone={BADGE_TONE[c.statut]}>{c.statut.replace('_', ' ')}</Badge>
-                      </Td>
-                      <Td>
-                        <div className="flex flex-wrap gap-3">
-                          <Button variant="link" onClick={() => ouvrirEdition(c)}>Modifier</Button>
-                          <Button
-                            variant="link"
-                            onClick={() => setGestionnaireOuvert(c.id)}
-                          >
-                            Compte gestionnaire
-                          </Button>
-                          <Button
-                            variant="link"
-                            onClick={() => setDocsOuverts(docsOuverts === c.id ? null : c.id)}
-                          >
-                            Documents
-                            {docsOuverts === c.id ? (
-                              <ChevronUp className="h-3 w-3" strokeWidth={2} />
-                            ) : (
-                              <ChevronDown className="h-3 w-3" strokeWidth={2} />
-                            )}
-                          </Button>
-                          {c.statut !== 'actif' && (
-                            <Button variant="link-success" onClick={() => handleStatut(c.id, 'actif')} disabled={enCours === c.id}>
-                              Activer
-                            </Button>
-                          )}
-                          {c.statut !== 'suspendu' && (
-                            <Button variant="link-danger" onClick={() => handleStatut(c.id, 'suspendu')} disabled={enCours === c.id}>
-                              Suspendre
-                            </Button>
-                          )}
-                        </div>
-                      </Td>
-                    </>
-                  )}
+                      )}
+                      <ActionIcone icone={Pencil} label="Modifier" onClick={() => ouvrirEdition(c)} />
+                      <ActionIcone
+                        icone={FileText}
+                        label={docsOuverts === c.id ? 'Masquer les documents' : 'Documents'}
+                        ton={docsOuverts === c.id ? 'neutre' : 'info'}
+                        onClick={() => setDocsOuverts(docsOuverts === c.id ? null : c.id)}
+                      />
+                      <MenuActions
+                        disabled={enCours === c.id}
+                        items={[
+                          { label: 'Compte gestionnaire', icone: UserCog, ton: 'info', onClick: () => setGestionnaireOuvert(c.id) },
+                          'separateur',
+                          { label: 'Activer', icone: CheckCircle2, ton: 'success', onClick: () => handleStatut(c, 'actif'), masque: c.statut === 'actif' },
+                          { label: 'Remettre en attente', icone: Clock, ton: 'warning', onClick: () => handleStatut(c, 'en_attente'), masque: c.statut === 'en_attente' },
+                          { label: 'Suspendre', icone: PauseCircle, ton: 'danger', onClick: () => handleStatut(c, 'suspendu'), masque: c.statut === 'suspendu' },
+                        ]}
+                      />
+                    </Actions>
+                  </TdActions>
                 </Tr>
                 {docsOuverts === c.id && (
                   <Tr>

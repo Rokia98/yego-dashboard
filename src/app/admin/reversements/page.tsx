@@ -22,9 +22,12 @@ import { ADMIN_NAV } from '@/lib/nav';
 import { DEMANDES_REVERSEMENT, JEKO } from '@/lib/capacites';
 import { formatFcfa } from '@/lib/format';
 import { telephonePourApi } from '@/lib/telephone';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 
 export default function AdminReversementsPage() {
   const { user, ready } = useAuthGuard(['admin']);
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
   const [compagnies, setCompagnies] = useState<Compagnie[]>([]);
   const [solde, setSolde] = useState<number | null | undefined>(undefined); // undefined = chargement, null = illisible
   const [erreurSolde, setErreurSolde] = useState<string | null>(null);
@@ -95,18 +98,19 @@ export default function AdminReversementsPage() {
     const message = DEMANDES_REVERSEMENT
       ? `Reverser ${net} à ${nomCompagnie} ?\nJèko transfère le montant vers le numéro ${operateur} de Yègo ; vous le remettrez ensuite en main propre à la compagnie.`
       : `Reverser ${net} à ${nomCompagnie} ?\nLe transfert Mobile Money part immédiatement depuis le magasin Jèko Yègo.`;
-    if (!confirm(message)) return;
+    const [titre, ...reste] = message.split('\n');
+    if (!(await confirmer({ titre, message: reste.join('\n'), libelleConfirmer: 'Reverser', ton: 'success' }))) return;
     setEnvoi(true);
     try {
       const r = await reversementsApi.creer(apercu.compagnieId, DEMANDES_REVERSEMENT ? moyenYego : undefined);
-      alert(
+      notifier.succes(
         r.statut === 'effectue'
           ? `Reversement #${r.id} enregistré (${formatFcfa(r.montantNet)}).`
           : `Reversement #${r.id} lancé (${formatFcfa(r.montantNet)}) : en attente de confirmation de l’opérateur.`,
       );
       apresReversement();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors du reversement');
+      notifier.erreur(err, 'Erreur lors du reversement');
     } finally {
       setEnvoi(false);
     }
@@ -116,15 +120,22 @@ export default function AdminReversementsPage() {
   async function confirmerCompte() {
     const c = apercu?.coordonnees;
     if (!apercu || !c?.moyen || !c.telephone) return;
-    if (!confirm(`Confirmer le compte de reversement de ${nomCompagnie} ?
-Vérifiez d’abord ce numéro auprès de la compagnie : le délai de sécurité sera levé.`))
+    if (
+      !(await confirmer({
+        titre: `Confirmer le compte de reversement de ${nomCompagnie} ?`,
+        message: 'Vérifiez d’abord ce numéro auprès de la compagnie : le délai de sécurité sera levé.',
+        libelleConfirmer: 'Confirmer le compte',
+        ton: 'warning',
+      }))
+    )
       return;
     setConfirmationCompte(true);
     try {
       await reversementsApi.setCoordonnees(apercu.compagnieId, { moyen: c.moyen, telephone: telephonePourApi(c.telephone) });
       chargerApercu(compagnieId);
+      notifier.succes('Compte de reversement confirmé.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la confirmation du compte');
+      notifier.erreur(err, 'Erreur lors de la confirmation du compte');
     } finally {
       setConfirmationCompte(false);
     }

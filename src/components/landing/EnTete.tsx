@@ -10,7 +10,7 @@ const LIENS = [
   { href: '#fonctionnalites', label: 'Fonctionnalités' },
   { href: '#paiements', label: 'Paiements' },
   { href: '#fonctionnement', label: 'Comment ça marche' },
-  { href: '#application', label: 'L’application' },
+  { href: '#app', label: 'L’application' },
   { href: '#faq', label: 'FAQ' },
 ];
 

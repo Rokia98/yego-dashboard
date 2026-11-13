@@ -22,6 +22,7 @@ import { useFiltres } from '@/lib/filtres';
 import { DEMANDES_REVERSEMENT } from '@/lib/capacites';
 import { formatDate, formatDateHeure, formatFcfa } from '@/lib/format';
 import { formatTelephone } from '@/lib/telephone';
+import { useDemander, useNotifier } from '@/components/ui/Dialogues';
 
 type Filtres = { statut: '' | 'en_cours' | 'effectue' | 'echoue'; compagnieId: string; remise: '' | 'a_remettre' | 'remis' };
 const DEFAUTS: Filtres = { statut: '', compagnieId: '', remise: '' };
@@ -102,6 +103,8 @@ export default function HistoriqueReversements({
 }) {
   const filtres = useFiltres<Filtres>(DEFAUTS);
   const { statut, compagnieId, remise } = filtres.appliques;
+  const demander = useDemander();
+  const notifier = useNotifier();
   const [ouvert, setOuvert] = useState<number | null>(null);
   const [enCours, setEnCours] = useState<number | null>(null);
 
@@ -121,10 +124,14 @@ export default function HistoriqueReversements({
   // Remise en main propre à la compagnie, une fois les fonds arrivés chez Yègo.
   async function marquerRemis(r: Reversement) {
     const nom = r.compagnie?.nom ?? `Compagnie #${r.compagnieId}`;
-    const note = prompt(
-      `Remise de ${formatFcfa(r.montantNet)} à ${nom} (reversement #${r.id}).\n` +
-        'Note facultative (ex. « espèces remises au gérant, reçu n°12 ») :',
-    );
+    const note = await demander({
+      titre: `Remise de ${formatFcfa(r.montantNet)} à ${nom}`,
+      message: `Reversement #${r.id} : confirmez que les fonds ont été remis à la compagnie.`,
+      label: 'Note facultative',
+      placeholder: 'Espèces remises au gérant, reçu n°12…',
+      libelleConfirmer: 'Marquer comme remis',
+      ton: 'success',
+    });
     if (note == null) return;
     setEnCours(r.id);
     try {
@@ -132,8 +139,9 @@ export default function HistoriqueReversements({
       if (remise === 'a_remettre') liste.retirer((x) => x.id === r.id);
       else liste.fusionner((x) => x.id === r.id, { ...r, ...maj });
       onRemis?.();
+      notifier.succes('Remise enregistrée.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la déclaration de remise');
+      notifier.erreur(err, 'Erreur lors de la déclaration de remise');
     } finally {
       setEnCours(null);
     }
@@ -247,8 +255,8 @@ export default function HistoriqueReversements({
                       </Td>
                     </Tr>
                     {ouvert === r.id && (
-                      <tr className="border-b border-line-soft bg-surface-2">
-                        <td colSpan={admin ? 9 : 8} className="px-5 py-3">
+                      <tr className="bg-surface-2">
+                        <td colSpan={admin ? 9 : 8} className="border-b border-line-soft px-5 py-3">
                           {r.jekoReference && <p className="mb-2 text-[11px] text-ink-faint">Réf. {r.jekoReference}</p>}
                           <Detail id={r.id} />
                         </td>

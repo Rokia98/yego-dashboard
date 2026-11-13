@@ -35,6 +35,7 @@ import BilletInteractif from '@/components/landing/BilletInteractif';
 import GrilleProjecteur from '@/components/landing/GrilleProjecteur';
 import Parcours from '@/components/landing/Parcours';
 import WhatsAppFlottant from '@/components/landing/WhatsAppFlottant';
+import EcransApp from '@/components/landing/EcransApp';
 import {
   CarteGps,
   Defilant,
@@ -143,6 +144,7 @@ export default function LandingPage() {
         <SectionPaiements />
         <Fonctionnement />
         <Voyageurs />
+        <EcransApp />
         <SectionApplication />
         <QuestionsFrequentes />
         <Contact />

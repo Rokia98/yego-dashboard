@@ -1,15 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { UserCog } from 'lucide-react';
+import { ShieldCheck, UserCog } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Select } from '@/components/ui/Field';
-import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
+import { Field, Select } from '@/components/ui/Field';
+import { Table, THead, Th, ThActions, Tr, Td, TdActions, TableMessage } from '@/components/ui/Table';
+import { Actions, ActionIcone } from '@/components/ui/Actions';
+import Modal, { ErreurFormulaire, PiedModal } from '@/components/ui/Modal';
+import Initiales from '@/components/ui/Initiales';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 import { FiltresBar, FiltreRecherche, FiltreSegments, FiltreSelect } from '@/components/ui/Filtres';
 import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import BientotDisponible from '@/components/ui/BientotDisponible';
 import { utilisateursApi, LIBELLE_ROLE, ROLES, ROLES_LIES_COMPAGNIE } from '@/features/utilisateurs';
@@ -40,70 +43,92 @@ const TONE_ROLE: Record<UserRole, 'neutral' | 'accent' | 'success' | 'warning'> 
   admin: 'warning',
 };
 
-/** Édition du rôle et de la compagnie de rattachement (PATCH /utilisateurs/:id/role). */
+/** Modale d'édition du rôle et de la compagnie de rattachement (PATCH /utilisateurs/:id/role). */
 function EditionRole({
   u,
   compagnies,
   onEnregistre,
-  onAnnuler,
+  onFermer,
 }: {
   u: Utilisateur;
   compagnies: Compagnie[];
   onEnregistre: (maj: Utilisateur) => void;
-  onAnnuler: () => void;
+  onFermer: () => void;
 }) {
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
   const [role, setRole] = useState<UserRole>(u.role);
   const [compagnieId, setCompagnieId] = useState(u.compagnieId != null ? String(u.compagnieId) : '');
   const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
   const lie = ROLES_LIES_COMPAGNIE.includes(role);
 
-  async function enregistrer() {
-    if (lie && !compagnieId) return alert('Choisissez la compagnie de rattachement.');
+  async function enregistrer(e: React.FormEvent) {
+    e.preventDefault();
+    setErreur(null);
+    if (lie && !compagnieId) return setErreur('Choisissez la compagnie de rattachement.');
     const compagnie = compagnies.find((c) => String(c.id) === compagnieId)?.nom;
-    if (
-      !confirm(
-        `Passer ${u.nom} en « ${LIBELLE_ROLE[role]} »${lie && compagnie ? ` chez ${compagnie}` : ''} ?\n` +
-          'Ses sessions en cours seront fermées.',
-      )
-    )
-      return;
+    const ok = await confirmer({
+      titre: 'Confirmer le changement de rôle',
+      message: `${u.nom} passera en « ${LIBELLE_ROLE[role]} »${lie && compagnie ? ` chez ${compagnie}` : ''}.\nSes sessions en cours seront fermées.`,
+      libelleConfirmer: 'Changer le rôle',
+      ton: 'warning',
+    });
+    if (!ok) return;
     setEnvoi(true);
     try {
       const maj = await utilisateursApi.setRole(u.id, { role, ...(lie ? { compagnieId: Number(compagnieId) } : {}) });
+      notifier.succes(`${u.nom} est maintenant « ${LIBELLE_ROLE[role]} ».`);
       onEnregistre(maj);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors du changement de rôle');
+      setErreur(err instanceof Error ? err.message : 'Erreur lors du changement de rôle');
     } finally {
       setEnvoi(false);
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Select value={role} onChange={(e) => setRole(e.target.value as UserRole)} className="!w-40 !py-1.5 text-xs">
-        {ROLES.map((r) => (
-          <option key={r.valeur} value={r.valeur}>
-            {r.label}
-          </option>
-        ))}
-      </Select>
-      {lie && (
-        <Select value={compagnieId} onChange={(e) => setCompagnieId(e.target.value)} className="!w-48 !py-1.5 text-xs">
-          <option value="">Compagnie…</option>
-          {compagnies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nom}
-            </option>
-          ))}
-        </Select>
-      )}
-      <Button variant="link-success" onClick={enregistrer} disabled={envoi}>
-        {envoi ? 'Enregistrement…' : 'Enregistrer'}
-      </Button>
-      <Button variant="link" onClick={onAnnuler} disabled={envoi}>
-        Annuler
-      </Button>
-    </div>
+    <Modal
+      ouvert
+      icone={ShieldCheck}
+      titre="Modifier le rôle"
+      sousTitre={`${u.nom} · ${formatTelephone(u.telephone)}`}
+      onFermer={envoi ? undefined : onFermer}
+      largeur="max-w-lg"
+    >
+      <form onSubmit={enregistrer}>
+        <div className="mb-4 flex items-center gap-2 text-xs text-ink-soft">
+          Rôle actuel :
+          <Badge tone={TONE_ROLE[u.role] ?? 'neutral'}>{LIBELLE_ROLE[u.role] ?? u.role}</Badge>
+          {u.compagnie?.nom && <span className="text-ink-faint">chez {u.compagnie.nom}</span>}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Nouveau rôle">
+            <Select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+              {ROLES.map((r) => (
+                <option key={r.valeur} value={r.valeur}>
+                  {r.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {lie && (
+            <Field label="Compagnie de rattachement">
+              <Select required value={compagnieId} onChange={(e) => setCompagnieId(e.target.value)}>
+                <option value="">Choisir…</option>
+                {compagnies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nom}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+        </div>
+        <ErreurFormulaire>{erreur}</ErreurFormulaire>
+        <PiedModal envoi={envoi} libelle="Enregistrer" onAnnuler={onFermer} />
+      </form>
+    </Modal>
   );
 }
 
@@ -147,6 +172,7 @@ export default function AdminUtilisateursPage() {
 
   if (!ready) return null;
 
+  const utilisateurEdite = edition != null ? liste.items.find((x) => x.id === edition) ?? null : null;
   const compteur =
     total != null ? `${liste.items.length} / ${total.toLocaleString('fr-FR')}` : `${liste.items.length} affiché${liste.items.length > 1 ? 's' : ''}`;
 
@@ -185,6 +211,25 @@ export default function AdminUtilisateursPage() {
             <FiltreSegments label="État" value={filtres.valeurs.actif} onChange={(v) => filtres.set('actif', v)} options={OPTIONS_ACTIF} />
           </FiltresBar>
 
+          {utilisateurEdite && (
+            <EditionRole
+              key={utilisateurEdite.id}
+              u={utilisateurEdite}
+              compagnies={compagnies}
+              onFermer={() => setEdition(null)}
+              onEnregistre={(maj) => {
+                const u = utilisateurEdite;
+                const compagnie = compagnies.find((c) => c.id === maj.compagnieId);
+                liste.fusionner((x) => x.id === u.id, {
+                  ...u,
+                  ...maj,
+                  compagnie: compagnie ? { id: compagnie.id, nom: compagnie.nom } : null,
+                });
+                setEdition(null);
+              }}
+            />
+          )}
+
           <Card>
             <CardHeader title="Comptes" right={compteur} />
             {liste.chargement ? (
@@ -203,44 +248,28 @@ export default function AdminUtilisateursPage() {
                     <Th>Compagnie</Th>
                     <Th>État</Th>
                     <Th>Créé le</Th>
-                    <Th>{''}</Th>
+                    <ThActions />
                   </THead>
                   <tbody>
                     {liste.pageItems.map((u) => (
-                      <Tr key={u.id}>
+                      <Tr key={u.id} attenue={!u.actif}>
                         <Td strong>
-                          {u.nom}
-                          <span className="block text-xs font-normal text-ink-faint">
-                            #{u.id}
-                            {u.email ? ` · ${u.email}` : ''}
+                          <span className="flex items-center gap-2.5">
+                            <Initiales nom={u.nom} />
+                            <span>
+                              {u.nom}
+                              <span className="block text-xs font-normal text-ink-faint">
+                                #{u.id}
+                                {u.email ? ` · ${u.email}` : ''}
+                              </span>
+                            </span>
                           </span>
                         </Td>
                         <Td className="whitespace-nowrap">{formatTelephone(u.telephone)}</Td>
-                        {edition === u.id ? (
-                          <Td colSpan={2}>
-                            <EditionRole
-                              u={u}
-                              compagnies={compagnies}
-                              onAnnuler={() => setEdition(null)}
-                              onEnregistre={(maj) => {
-                                const compagnie = compagnies.find((c) => c.id === maj.compagnieId);
-                                liste.fusionner((x) => x.id === u.id, {
-                                  ...u,
-                                  ...maj,
-                                  compagnie: compagnie ? { id: compagnie.id, nom: compagnie.nom } : null,
-                                });
-                                setEdition(null);
-                              }}
-                            />
-                          </Td>
-                        ) : (
-                          <>
-                            <Td>
-                              <Badge tone={TONE_ROLE[u.role] ?? 'neutral'}>{LIBELLE_ROLE[u.role] ?? u.role}</Badge>
-                            </Td>
-                            <Td>{u.compagnie?.nom ?? (u.compagnieId != null ? `Compagnie #${u.compagnieId}` : '—')}</Td>
-                          </>
-                        )}
+                        <Td>
+                          <Badge tone={TONE_ROLE[u.role] ?? 'neutral'}>{LIBELLE_ROLE[u.role] ?? u.role}</Badge>
+                        </Td>
+                        <Td>{u.compagnie?.nom ?? (u.compagnieId != null ? `Compagnie #${u.compagnieId}` : '—')}</Td>
                         <Td>
                           {u.actif ? <Badge tone="success">Actif</Badge> : <Badge tone="danger">Désactivé</Badge>}
                           {u.doitChangerMotDePasse && (
@@ -248,13 +277,13 @@ export default function AdminUtilisateursPage() {
                           )}
                         </Td>
                         <Td className="whitespace-nowrap">{formatDate(u.dateCreation)}</Td>
-                        <Td className="whitespace-nowrap">
-                          {edition !== u.id && u.id !== user?.userId && (
-                            <Button variant="link" onClick={() => setEdition(u.id)}>
-                              Modifier le rôle
-                            </Button>
-                          )}
-                        </Td>
+                        <TdActions>
+                          <Actions>
+                            {u.id !== user?.userId && (
+                              <ActionIcone icone={ShieldCheck} label="Modifier le rôle" onClick={() => setEdition(u.id)} />
+                            )}
+                          </Actions>
+                        </TdActions>
                       </Tr>
                     ))}
                   </tbody>

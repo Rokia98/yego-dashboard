@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal';
 import { compagniesApi } from '@/features/compagnies';
 import type { Compagnie } from '@/features/compagnies';
 import { chiffresTelephone, estTelephoneValide, formatTelephone, lienWhatsApp, telephonePourApi } from '@/lib/telephone';
+import { useConfirmer } from '@/components/ui/Dialogues';
 
 type Identifiants = { telephone: string; motDePasse: string };
 
@@ -31,6 +32,7 @@ function messageIdentifiants(compagnie: string, id: Identifiants): string {
  * numéro de la compagnie. Recréer le compte régénère le mot de passe.
  */
 export default function CompteGestionnaire({ compagnie, onFermer }: { compagnie: Compagnie; onFermer: () => void }) {
+  const confirmer = useConfirmer();
   const [nom, setNom] = useState('');
   const [telephone, setTelephone] = useState('');
   const [envoi, setEnvoi] = useState(false);
@@ -48,10 +50,12 @@ export default function CompteGestionnaire({ compagnie, onFermer }: { compagnie:
       return;
     }
     if (
-      !confirm(
-        `Créer le compte gestionnaire de ${compagnie.nom} ?\n` +
-          'Si un compte existe déjà pour ce numéro, son mot de passe est régénéré et l’ancien ne fonctionnera plus.',
-      )
+      !(await confirmer({
+        titre: `Créer le compte gestionnaire de ${compagnie.nom} ?`,
+        message: 'Si un compte existe déjà pour ce numéro, son mot de passe est régénéré et l’ancien ne fonctionnera plus.',
+        libelleConfirmer: 'Créer le compte',
+        ton: 'warning',
+      }))
     )
       return;
     setEnvoi(true);
@@ -72,8 +76,18 @@ export default function CompteGestionnaire({ compagnie, onFermer }: { compagnie:
     setEnvoye(true);
   }
 
-  function fermer() {
-    if (identifiants && !envoye && !confirm('Les identifiants n’ont pas été envoyés. Fermer quand même ? Il faudra régénérer le mot de passe.'))
+  async function fermer() {
+    if (
+      identifiants &&
+      !envoye &&
+      !(await confirmer({
+        titre: 'Les identifiants n’ont pas été envoyés',
+        message: 'Fermer quand même ? Il faudra régénérer le mot de passe.',
+        libelleConfirmer: 'Fermer',
+        libelleAnnuler: 'Rester',
+        ton: 'warning',
+      }))
+    )
       return;
     onFermer();
   }

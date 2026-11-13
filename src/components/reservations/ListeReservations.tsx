@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
+import { Ban, Banknote, Download } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
+import { Table, THead, Th, ThActions, Tr, Td, TdActions, TableMessage } from '@/components/ui/Table';
+import { Actions, ActionIcone, MenuActions } from '@/components/ui/Actions';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import LoadMore from '@/components/ui/LoadMore';
@@ -85,6 +87,8 @@ export default function ListeReservations({ espace }: Props) {
   const [compagnies, setCompagnies] = useState<Map<number, string>>(new Map());
   const [enCours, setEnCours] = useState<number | null>(null);
   const [exportEnCours, setExportEnCours] = useState(false);
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
 
   useEffect(() => {
     if (!admin) return;
@@ -117,20 +121,28 @@ export default function ListeReservations({ espace }: Props) {
 
   async function handleAnnuler(r: Reservation) {
     const payante = r.paiement?.statut === 'paye';
-    if (!confirm(messageConfirmationAnnulation(payante))) return;
+    const ok = await confirmer({
+      titre: `Annuler la réservation #${r.id} ?`,
+      message: messageConfirmationAnnulation(payante),
+      libelleConfirmer: 'Annuler la réservation',
+      libelleAnnuler: 'Retour',
+      ton: 'danger',
+    });
+    if (!ok) return;
     setEnCours(r.id);
     try {
       const res = await reservationsApi.annuler(r.id);
       if (res.remboursement) {
-        alert(
+        notifier.succes(
           `Remboursement créé : ${formatFcfa(res.remboursement.montantRembourse)} ` +
             `(frais retenus ${formatFcfa(res.remboursement.fraisRetenus)}).` +
             (admin ? '' : ' À confirmer depuis la page Remboursements après versement.'),
         );
       }
+      else notifier.succes(`Réservation #${r.id} annulée.`);
       liste.fusionner((x) => x.id === r.id, { ...r, statut: 'annulee' });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erreur lors de l'annulation");
+      notifier.erreur(err, "Erreur lors de l'annulation");
     } finally {
       setEnCours(null);
     }
@@ -138,13 +150,20 @@ export default function ListeReservations({ espace }: Props) {
 
   async function handleEncaisser(r: Reservation) {
     const montant = r.depart?.trajet?.prix ? Number(r.depart.trajet.prix) * r.nombrePlaces : null;
-    if (!confirm(`Encaisser ${montant != null ? formatFcfa(montant) : 'le montant'} en espèces pour la réservation #${r.id} ?`)) return;
+    const ok = await confirmer({
+      titre: `Encaisser ${montant != null ? formatFcfa(montant) : 'le montant'} en espèces ?`,
+      message: `Réservation #${r.id} · ${nomVoyageur(r)}\nConfirmez uniquement après avoir reçu l’argent.`,
+      libelleConfirmer: 'Encaisser',
+      ton: 'success',
+    });
+    if (!ok) return;
     setEnCours(r.id);
     try {
       const paiement = await paiementsApi.encaisserGuichet(r.id, 'espece');
       liste.fusionner((x) => x.id === r.id, { ...r, paiement });
+      notifier.succes(`Paiement de la réservation #${r.id} encaissé.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erreur lors de l'encaissement");
+      notifier.erreur(err, "Erreur lors de l'encaissement");
     } finally {
       setEnCours(null);
     }
@@ -158,9 +177,10 @@ export default function ListeReservations({ espace }: Props) {
         `reservations${admin ? '-reseau' : ''}-${horodatageFichier()}`,
         versCsv(ENTETES_EXPORT_RESERVATIONS, items.map((r) => ligneExportReservation(r, undefined, compagnies))),
       );
-      if (tronque) alert('Export limité : seules les 2000 premières réservations ont été parcourues.');
+      if (tronque) notifier.info('Export limité : seules les 2000 premières réservations ont été parcourues.');
+      else notifier.succes(`${items.length} réservation${items.length > 1 ? 's' : ''} exportée${items.length > 1 ? 's' : ''}.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erreur lors de l'export");
+      notifier.erreur(err, "Erreur lors de l'export");
     } finally {
       setExportEnCours(false);
     }
@@ -277,14 +297,14 @@ export default function ListeReservations({ espace }: Props) {
                 <Th>Canal</Th>
                 <Th>Montant</Th>
                 <Th>Statut</Th>
-                <Th>Action</Th>
+                <ThActions />
               </THead>
               <tbody>
                 {liste.pageItems.map((r) => {
                   const tel = r.utilisateur?.telephone ?? r.passagerTelephone;
                   const paye = r.paiement?.statut === 'paye';
                   return (
-                    <Tr key={r.id}>
+                    <Tr key={r.id} attenue={r.statut !== 'confirmee'}>
                       <Td strong>
                         {nomVoyageur(r)}
                         <span className="block text-xs font-normal text-ink-faint">
@@ -335,20 +355,25 @@ export default function ListeReservations({ espace }: Props) {
                       <Td>
                         <Badge tone={TONE_STATUT[r.statut] ?? 'neutral'}>{LIBELLE_STATUT[r.statut] ?? r.statut}</Badge>
                       </Td>
-                      <Td>
-                        <div className="flex gap-3">
+                      <TdActions>
+                        <Actions>
                           {!admin && r.statut === 'confirmee' && r.canal === 'guichet' && !r.paiement && (
-                            <Button variant="link-success" onClick={() => handleEncaisser(r)} disabled={enCours === r.id}>
-                              {enCours === r.id ? '...' : 'Encaisser'}
-                            </Button>
+                            <ActionIcone
+                              icone={Banknote}
+                              label="Encaisser en espèces"
+                              ton="success"
+                              chargement={enCours === r.id}
+                              onClick={() => handleEncaisser(r)}
+                            />
                           )}
                           {r.statut === 'confirmee' && (
-                            <Button variant="link-danger" onClick={() => handleAnnuler(r)} disabled={enCours === r.id}>
-                              {enCours === r.id ? '...' : 'Annuler'}
-                            </Button>
+                            <MenuActions
+                              disabled={enCours === r.id}
+                              items={[{ label: 'Annuler la réservation', icone: Ban, ton: 'danger', onClick: () => handleAnnuler(r) }]}
+                            />
                           )}
-                        </div>
-                      </Td>
+                        </Actions>
+                      </TdActions>
                     </Tr>
                   );
                 })}

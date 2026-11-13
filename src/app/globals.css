@@ -33,6 +33,7 @@
   --chart-1: 42 120 214;
   --chart-2: 235 104 52;
   --chart-3: 27 175 122;
+  --chart-4: 124 92 230;
   --chart-grid: 225 224 217;
   --chart-axis: 195 194 183;
 
@@ -69,6 +70,7 @@
   --chart-1: 57 135 229;
   --chart-2: 217 89 38;
   --chart-3: 25 158 112;
+  --chart-4: 150 120 245;
   --chart-grid: 44 44 42;
   --chart-axis: 56 56 53;
 
@@ -127,3 +129,26 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+  Cartes de statistiques : chaque carte d'une rangée prend une teinte
+  (orange Yègo, bleu, vert, violet) via --stat, sauf teinte imposée.
+*/
+.stat-card {
+  --stat: var(--accent);
+}
+.stat-card:nth-child(4n + 2) {
+  --stat: var(--chart-1);
+}
+.stat-card:nth-child(4n + 3) {
+  --stat: var(--chart-3);
+}
+.stat-card:nth-child(4n + 4) {
+  --stat: var(--chart-4);
+}
+.stat-card[data-ton='accent'] { --stat: var(--accent); }
+.stat-card[data-ton='info'] { --stat: var(--chart-1); }
+.stat-card[data-ton='success'] { --stat: var(--chart-3); }
+.stat-card[data-ton='violet'] { --stat: var(--chart-4); }
+.stat-card[data-ton='danger'] { --stat: var(--danger); }
+.stat-card[data-ton='warning'] { --stat: var(--warning); }

@@ -18,6 +18,7 @@ import type { DemandeSupport, DemandeSupportDetail, StatutSupport } from '@/feat
 import type { AuthUser } from '@/lib/auth';
 import { formatDateHeure } from '@/lib/format';
 import { formatTelephone } from '@/lib/telephone';
+import { useConfirmer } from '@/components/ui/Dialogues';
 
 const RAFRAICHISSEMENT = 30_000;
 const MAX_MESSAGE = 4000;
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export default function FilSupport({ demandeId, user, onMaj, onFermer }: Props) {
+  const confirmer = useConfirmer();
   const [demande, setDemande] = useState<DemandeSupportDetail | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -105,7 +107,16 @@ export default function FilSupport({ demandeId, user, onMaj, onFermer }: Props) 
 
   async function changer(data: { statut?: StatutSupport; priorite?: 'normale' | 'haute' }) {
     if (!demande) return;
-    if (data.statut === 'fermee' && !confirm('Fermer cette demande ? Plus aucun message ne pourra y être ajouté.')) return;
+    if (
+      data.statut === 'fermee' &&
+      !(await confirmer({
+        titre: 'Fermer cette demande ?',
+        message: 'Plus aucun message ne pourra y être ajouté.',
+        libelleConfirmer: 'Fermer la demande',
+        ton: 'warning',
+      }))
+    )
+      return;
     setErreur(null);
     try {
       const d = await supportApi.modifier(demande.id, data);

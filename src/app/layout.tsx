@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { DialoguesProvider } from '@/components/ui/Dialogues';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-paper font-sans text-ink antialiased">{children}</body>
+      <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+        <DialoguesProvider>{children}</DialoguesProvider>
+      </body>
     </html>
   );
 }

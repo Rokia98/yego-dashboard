@@ -19,6 +19,7 @@ import type { DemandeReversement, MoyenYego } from '@/features/reversements';
 import { usePagedList } from '@/lib/pagination';
 import { useFiltres } from '@/lib/filtres';
 import { formatDate, formatDateHeure, formatFcfa } from '@/lib/format';
+import { useConfirmer, useDemander, useNotifier } from '@/components/ui/Dialogues';
 
 type StatutFiltre = '' | 'en_attente' | 'approuvee' | 'rejetee' | 'annulee';
 // Clés distinctes de celles d'HistoriqueReversements (même page, même URL).
@@ -53,6 +54,9 @@ export default function DemandesReversement({
 }) {
   const filtres = useFiltres<Filtres>(admin ? DEFAUTS_ADMIN : DEFAUTS_COMPAGNIE);
   const { demandes: statut, demandesCompagnie } = filtres.appliques;
+  const confirmer = useConfirmer();
+  const demander = useDemander();
+  const notifier = useNotifier();
   const [enCours, setEnCours] = useState<number | null>(null);
   // Opérateur du numéro Yègo choisi par demande (approbation).
   const [moyens, setMoyens] = useState<Record<number, MoyenYego>>({});
@@ -76,7 +80,7 @@ export default function DemandesReversement({
       liste.recharger();
       onTraitee?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : erreurParDefaut);
+      notifier.erreur(err, erreurParDefaut);
       // L'approbation peut avoir échoué après coup (transfert refusé) : on resynchronise.
       liste.recharger();
     } finally {
@@ -84,32 +88,49 @@ export default function DemandesReversement({
     }
   }
 
-  function approuver(d: DemandeReversement) {
+  async function approuver(d: DemandeReversement) {
     const nom = d.compagnie?.nom ?? `Compagnie #${d.compagnieId}`;
     const moyen = moyens[d.id] ?? 'wave';
     const operateur = MOYENS_RETRAIT.find((m) => m.valeur === moyen)?.label ?? moyen;
     if (
-      !confirm(
-        `Approuver la demande #${d.id} de ${nom} ?\n` +
+      !(await confirmer({
+        titre: `Approuver la demande #${d.id} de ${nom} ?`,
+        libelleConfirmer: 'Approuver',
+        ton: 'success',
+        message:
           `Jèko transfère le montant vers le numéro ${operateur} de Yègo ; vous le remettrez ensuite en main propre à la compagnie. ` +
           (d.montantDemande != null
             ? `Montant demandé : ${formatFcfa(d.montantDemande)} (au plus, en billets entiers).`
             : `Montant recalculé à l’instant (estimé à ${formatFcfa(d.montantNetEstime)} lors de la demande).`),
-      )
+      }))
     )
       return;
     agir(d, () => reversementsApi.approuverDemande(d.id, moyen), 'Erreur lors de l’approbation');
   }
 
-  function rejeter(d: DemandeReversement) {
-    const motif = prompt(`Motif du rejet de la demande #${d.id} (transmis à la compagnie) :`)?.trim();
-    if (motif == null || motif === '') return;
-    if (motif.length < 3) return alert('Motif trop court (3 caractères minimum).');
+  async function rejeter(d: DemandeReversement) {
+    const motif = await demander({
+      titre: `Rejeter la demande #${d.id} ?`,
+      label: 'Motif du rejet (transmis à la compagnie)',
+      multiligne: true,
+      minLength: 3,
+      libelleConfirmer: 'Rejeter',
+      ton: 'danger',
+    });
+    if (!motif) return;
     agir(d, () => reversementsApi.rejeterDemande(d.id, motif.slice(0, 500)), 'Erreur lors du rejet');
   }
 
-  function annuler(d: DemandeReversement) {
-    if (!confirm(`Annuler votre demande de reversement #${d.id} ?`)) return;
+  async function annuler(d: DemandeReversement) {
+    if (
+      !(await confirmer({
+        titre: `Annuler votre demande de reversement #${d.id} ?`,
+        libelleConfirmer: 'Annuler la demande',
+        libelleAnnuler: 'Retour',
+        ton: 'danger',
+      }))
+    )
+      return;
     agir(d, () => reversementsApi.annulerDemande(d.id), 'Erreur lors de l’annulation');
   }
 

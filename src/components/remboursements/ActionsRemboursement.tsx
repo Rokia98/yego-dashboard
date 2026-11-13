@@ -1,7 +1,9 @@
 'use client';
 
+import { CheckCheck, Hourglass, RotateCcw, Send } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/Button';
+import { Actions, ActionIcone, MenuActions } from '@/components/ui/Actions';
+import type { OptionsConfirmation } from '@/components/ui/Dialogues';
 import { remboursableParJeko } from '@/features/remboursements';
 import type { ModeRemboursement, Remboursement } from '@/features/remboursements';
 import { JEKO } from '@/lib/capacites';
@@ -53,21 +55,28 @@ export function StatutRemboursement({ r }: { r: Remboursement }) {
   );
 }
 
-/** Demande confirmation avant le PATCH ; false si l'utilisateur annule. */
-export function demanderConfirmation(r: Remboursement, mode: ModeRemboursement | undefined): boolean {
+/** Contenu de la boîte de confirmation affichée avant le PATCH. */
+export function confirmationRemboursement(r: Remboursement, mode: ModeRemboursement | undefined): OptionsConfirmation {
   const montant = formatFcfa(r.montantRembourse);
   if (mode === 'manuel' || !JEKO) {
-    return confirm(
-      `Marquer le remboursement #${r.id} (${montant}) comme versé ?\n` +
+    return {
+      titre: `Marquer le remboursement #${r.id} comme versé ?`,
+      message:
+        `Montant : ${montant}.\n` +
         'À faire uniquement si le voyageur a déjà été remboursé hors plateforme : ' +
         'le paiement passera au statut « remboursé ».',
-    );
+      libelleConfirmer: 'Marquer comme versé',
+      ton: 'warning',
+    };
   }
   const tel = r.reservation?.paiement?.telephonePayeur;
-  return confirm(
-    `${r.statut === 'echoue' ? 'Relancer le transfert' : 'Rembourser'} ${montant} via Mobile Money ?\n` +
-      `Le montant sera transféré automatiquement au numéro qui a payé${tel ? ` (${formatTelephone(tel)})` : ''}.`,
-  );
+  const relance = r.statut === 'echoue';
+  return {
+    titre: `${relance ? 'Relancer le transfert de' : 'Rembourser'} ${montant} via Mobile Money ?`,
+    message: `Le montant sera transféré automatiquement au numéro qui a payé${tel ? ` (${formatTelephone(tel)})` : ''}.`,
+    libelleConfirmer: relance ? 'Relancer le transfert' : 'Rembourser',
+    ton: 'success',
+  };
 }
 
 export function ActionsRemboursement({
@@ -87,46 +96,51 @@ export function ActionsRemboursement({
   manuelSurJeko?: boolean;
 }) {
   if (r.statut === 'en_cours') {
-    return <span className="text-xs text-ink-faint">Attente opérateur…</span>;
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-medium text-warning">
+        <Hourglass className="h-3 w-3" strokeWidth={2} /> Attente opérateur
+      </span>
+    );
   }
   if (!estATraiter(r)) return null;
-  if (enCours) return <span className="text-xs text-ink-faint">...</span>;
 
   // Avant 0.28.0 : un seul bouton, PATCH sans body (constat manuel).
   if (!JEKO) {
     return (
-      <Button variant="link-success" onClick={() => onConfirmer(r)}>
-        Confirmer le versement
-      </Button>
+      <Actions>
+        <ActionIcone icone={CheckCheck} label="Confirmer le versement" ton="success" chargement={enCours} onClick={() => onConfirmer(r)} />
+      </Actions>
     );
   }
 
   if (!remboursableParJeko(r)) {
     return (
-      <Button variant="link-success" onClick={() => onConfirmer(r, 'manuel')}>
-        Marquer comme remboursé
-      </Button>
+      <Actions>
+        <ActionIcone icone={CheckCheck} label="Marquer comme remboursé" ton="success" chargement={enCours} onClick={() => onConfirmer(r, 'manuel')} />
+      </Actions>
     );
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
-      <Button variant="link-success" onClick={() => onConfirmer(r)}>
-        {r.statut === 'echoue' ? 'Relancer le transfert' : 'Rembourser via Mobile Money'}
-      </Button>
-      {manuelSurJeko ? (
-        <button
-          type="button"
-          onClick={() => onConfirmer(r, 'manuel')}
-          className="text-[11px] text-ink-faint hover:text-ink hover:underline"
-        >
-          Marquer comme remboursé manuellement
-        </button>
-      ) : (
-        <span className="max-w-[14rem] text-[11px] text-ink-faint">
-          Payé en ligne : remboursement manuel via l’équipe Yègo.
+    <Actions>
+      {!manuelSurJeko && (
+        <span className="mr-1 max-w-[11rem] whitespace-normal text-right text-[11px] leading-tight text-ink-faint">
+          Remboursement manuel via l’équipe Yègo
         </span>
       )}
-    </div>
+      <ActionIcone
+        icone={r.statut === 'echoue' ? RotateCcw : Send}
+        label={r.statut === 'echoue' ? 'Relancer le transfert' : 'Rembourser via Mobile Money'}
+        ton="success"
+        chargement={enCours}
+        onClick={() => onConfirmer(r)}
+      />
+      {manuelSurJeko && (
+        <MenuActions
+          disabled={enCours}
+          items={[{ label: 'Marquer comme remboursé manuellement', icone: CheckCheck, ton: 'warning', onClick: () => onConfirmer(r, 'manuel') }]}
+        />
+      )}
+    </Actions>
   );
 }

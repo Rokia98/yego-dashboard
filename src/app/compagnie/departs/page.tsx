@@ -1,18 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { ArrowRight, CalendarClock, Clock, MapPin, Play, XCircle } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import PageHeader from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Table, THead, Th, Tr, Td, TableMessage } from '@/components/ui/Table';
+import { Table, THead, Th, ThActions, Tr, Td, TdActions, TableMessage } from '@/components/ui/Table';
+import { Actions, ActionIcone, MenuActions } from '@/components/ui/Actions';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 import { Field, Input, Select } from '@/components/ui/Field';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import LoadMore from '@/components/ui/LoadMore';
 import Pagination from '@/components/ui/Pagination';
-import Modal, { BoutonCreation, PiedModal } from '@/components/ui/Modal';
+import Modal, { BoutonCreation, ErreurFormulaire, PiedModal } from '@/components/ui/Modal';
 import {
   departsApi,
   FILTRES_DEPARTS_DEFAUT,
@@ -42,6 +42,13 @@ const CHAMPS_VIDES = {
   chauffeurId: '',
 };
 
+const LIBELLE_STATUT: Record<string, string> = {
+  planifie: 'Planifié',
+  en_route: 'En route',
+  arrive: 'Arrivé',
+  annule: 'Annulé',
+};
+
 const BADGE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'accent' | 'neutral'> = {
   planifie: 'success',
   en_route: 'accent',
@@ -59,6 +66,13 @@ export default function DepartsPage() {
   const [envoi, setEnvoi] = useState(false);
   const [enCours, setEnCours] = useState<number | null>(null);
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
+  // Modale « signaler un retard ».
+  const [retardPour, setRetardPour] = useState<Depart | null>(null);
+  const [retard, setRetard] = useState({ minutes: '', motif: '' });
+  const [erreurRetard, setErreurRetard] = useState<string | null>(null);
+  const [envoiRetard, setEnvoiRetard] = useState(false);
   const compagnieId = user?.compagnieId ?? null;
   // depart:manage (planifier, modifier, annuler) : gestionnaire seulement depuis l'API 0.29.0 ;
   // les agents gardent depart:operer (démarrer, signaler un retard).
@@ -109,6 +123,7 @@ export default function DepartsPage() {
       setChamps(CHAMPS_VIDES);
       setFormulaireOuvert(false);
       liste.recharger();
+      notifier.succes('Départ planifié.');
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Erreur lors de la création du départ');
     } finally {
@@ -122,49 +137,73 @@ export default function DepartsPage() {
     setChamps(CHAMPS_VIDES);
   }
 
-  async function handleAnnuler(id: number) {
-    if (!confirm('Annuler ce départ ?')) return;
-    setEnCours(id);
+  const libelle = (d: Depart) => `${d.trajet.villeDepart.nom} → ${d.trajet.villeArrivee.nom} du ${formatDate(d.dateDepart)}`;
+
+  async function handleAnnuler(d: Depart) {
+    const ok = await confirmer({
+      titre: 'Annuler ce départ ?',
+      message: `${libelle(d)}\nLes voyageurs déjà réservés seront notifiés.`,
+      libelleConfirmer: 'Annuler le départ',
+      libelleAnnuler: 'Retour',
+      ton: 'danger',
+    });
+    if (!ok) return;
+    setEnCours(d.id);
     try {
-      await departsApi.updateStatut(id, 'annule');
+      await departsApi.updateStatut(d.id, 'annule');
       liste.recharger();
+      notifier.succes('Départ annulé.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erreur lors de l'annulation");
+      notifier.erreur(err, "Erreur lors de l'annulation");
     } finally {
       setEnCours(null);
     }
   }
 
-  async function handleDemarrer(id: number) {
-    if (!confirm('Démarrer ce départ ? Le suivi GPS devient actif et les voyageurs sont notifiés.')) return;
-    setEnCours(id);
+  async function handleDemarrer(d: Depart) {
+    const ok = await confirmer({
+      titre: 'Démarrer ce départ ?',
+      message: `${libelle(d)}\nLe suivi GPS devient actif et les voyageurs sont notifiés.`,
+      libelleConfirmer: 'Démarrer',
+      ton: 'success',
+    });
+    if (!ok) return;
+    setEnCours(d.id);
     try {
-      await suiviApi.demarrer(id);
+      await suiviApi.demarrer(d.id);
       liste.recharger();
+      notifier.succes('Départ démarré : bon voyage !');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors du démarrage');
+      notifier.erreur(err, 'Erreur lors du démarrage');
     } finally {
       setEnCours(null);
     }
   }
 
-  async function handleRetard(id: number) {
-    const saisie = prompt('Retard estimé en minutes ?');
-    if (!saisie) return;
-    const minutes = Number(saisie);
+  function ouvrirRetard(d: Depart) {
+    setRetard({ minutes: '', motif: '' });
+    setErreurRetard(null);
+    setRetardPour(d);
+  }
+
+  async function handleRetard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!retardPour) return;
+    const minutes = Number(retard.minutes);
     if (!Number.isInteger(minutes) || minutes < 1) {
-      alert('Indiquez un nombre entier de minutes (1 ou plus).');
+      setErreurRetard('Indiquez un nombre entier de minutes (1 ou plus).');
       return;
     }
-    const motif = prompt('Motif (optionnel) ?') || undefined;
-    setEnCours(id);
+    setEnvoiRetard(true);
     try {
-      await suiviApi.signalerRetard(id, minutes, motif);
+      await suiviApi.signalerRetard(retardPour.id, minutes, retard.motif.trim() || undefined);
+      setRetardPour(null);
       liste.recharger();
+      notifier.succes(`Retard de ${minutes} min signalé aux voyageurs.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors du signalement');
+      setErreurRetard(err instanceof Error ? err.message : 'Erreur lors du signalement');
     } finally {
-      setEnCours(null);
+      setEnvoiRetard(false);
     }
   }
 
@@ -194,7 +233,7 @@ export default function DepartsPage() {
       {gestionnaire && <BoutonCreation label="Planifier un départ" onClick={() => setFormulaireOuvert(true)} />}
 
       {gestionnaire && (
-        <Modal ouvert={formulaireOuvert} titre="Planifier un départ" onFermer={envoi ? undefined : fermerFormulaire}>
+        <Modal ouvert={formulaireOuvert} icone={CalendarClock} titre="Planifier un départ" onFermer={envoi ? undefined : fermerFormulaire}>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Trajet">
@@ -239,12 +278,63 @@ export default function DepartsPage() {
               </Field>
             </div>
 
-            {erreur && <p className="mt-3 text-sm text-danger">{erreur}</p>}
+            <ErreurFormulaire>{erreur}</ErreurFormulaire>
 
             <PiedModal envoi={envoi} libelle="Planifier le départ" onAnnuler={fermerFormulaire} />
           </form>
         </Modal>
       )}
+
+      <Modal
+        ouvert={retardPour != null}
+        icone={Clock}
+        titre="Signaler un retard"
+        sousTitre={retardPour ? libelle(retardPour) : undefined}
+        onFermer={envoiRetard ? undefined : () => setRetardPour(null)}
+        largeur="max-w-md"
+      >
+        <form onSubmit={handleRetard}>
+          <p className="mb-2 text-xs font-medium text-ink-soft">Retard estimé</p>
+          <div className="mb-3 grid grid-cols-4 gap-2">
+            {[10, 15, 30, 60].map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setRetard((r) => ({ ...r, minutes: String(m) }))}
+                className={`rounded-xl border px-2 py-2 text-sm font-medium transition-colors ${
+                  retard.minutes === String(m)
+                    ? 'border-warning bg-warning text-white shadow-subtle'
+                    : 'border-line bg-surface text-ink-soft hover:border-warning/50 hover:text-warning'
+                }`}
+              >
+                {m === 60 ? '1 h' : `${m} min`}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <Field label="Minutes">
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                required
+                value={retard.minutes}
+                onChange={(e) => setRetard({ ...retard, minutes: e.target.value })}
+              />
+            </Field>
+            <Field label="Motif (optionnel, visible des voyageurs)">
+              <Input
+                type="text"
+                placeholder="Embouteillage, panne…"
+                value={retard.motif}
+                onChange={(e) => setRetard({ ...retard, motif: e.target.value })}
+              />
+            </Field>
+          </div>
+          <ErreurFormulaire>{erreurRetard}</ErreurFormulaire>
+          <PiedModal envoi={envoiRetard} libelle="Signaler le retard" libelleEnvoi="Envoi…" onAnnuler={() => setRetardPour(null)} />
+        </form>
+      </Modal>
 
       <FiltresBar
         nbActifs={filtres.nbActifs}
@@ -296,47 +386,67 @@ export default function DepartsPage() {
               <Th>Trajet</Th>
               <Th>Date</Th>
               <Th>Heure</Th>
-              <Th>Places</Th>
+              <Th>Remplissage</Th>
               <Th>Statut</Th>
-              <Th>Action</Th>
+              <ThActions />
             </THead>
             <tbody>
               {liste.pageItems.map((d) => (
-                <Tr key={d.id}>
-                  <Td strong>{d.trajet.villeDepart.nom} → {d.trajet.villeArrivee.nom}</Td>
+                <Tr key={d.id} attenue={d.statut === 'annule'}>
+                  <Td strong>
+                    <span className="flex items-center gap-1.5 whitespace-nowrap">
+                      {d.trajet.villeDepart.nom}
+                      <ArrowRight className="h-3.5 w-3.5 text-ink-faint" strokeWidth={2} />
+                      {d.trajet.villeArrivee.nom}
+                    </span>
+                  </Td>
                   <Td>{formatDate(d.dateDepart)}</Td>
                   <Td>{formatHeure(d.trajet.heureDepart)}</Td>
-                  <Td className="tabular-nums">{d.placesDisponibles} / {d.placesTotales}</Td>
                   <Td>
-                    <Badge tone={BADGE_TONE[d.statut] || 'neutral'}>{d.statut.replace('_', ' ')}</Badge>
+                    <Remplissage libres={d.placesDisponibles} total={d.placesTotales} />
                   </Td>
                   <Td>
-                    <div className="flex flex-wrap gap-3">
+                    <Badge tone={BADGE_TONE[d.statut] || 'neutral'}>{LIBELLE_STATUT[d.statut] ?? d.statut.replace('_', ' ')}</Badge>
+                  </Td>
+                  <TdActions>
+                    <Actions>
                       {d.statut === 'planifie' && (
-                        <Button variant="link-success" onClick={() => handleDemarrer(d.id)} disabled={enCours === d.id}>
-                          Démarrer
-                        </Button>
-                      )}
-                      {(d.statut === 'planifie' || d.statut === 'en_route') && (
-                        <Button variant="link" onClick={() => handleRetard(d.id)} disabled={enCours === d.id}>
-                          Retard
-                        </Button>
+                        <ActionIcone
+                          icone={Play}
+                          label="Démarrer"
+                          ton="success"
+                          chargement={enCours === d.id}
+                          onClick={() => handleDemarrer(d)}
+                        />
                       )}
                       {d.statut === 'en_route' && (
-                        <Link
-                          href={`/compagnie/departs/${d.id}/suivi`}
-                          className="flex items-center gap-1 text-xs font-medium text-accent-ink hover:underline"
-                        >
-                          <MapPin className="h-3.5 w-3.5" strokeWidth={1.75} /> Suivi
-                        </Link>
+                        <ActionIcone icone={MapPin} label="Suivi en direct" ton="info" href={`/compagnie/departs/${d.id}/suivi`} />
                       )}
-                      {gestionnaire && d.statut !== 'annule' && d.statut !== 'arrive' && (
-                        <Button variant="link-danger" onClick={() => handleAnnuler(d.id)} disabled={enCours === d.id}>
-                          Annuler
-                        </Button>
+                      {(d.statut === 'planifie' || d.statut === 'en_route') && (
+                        <ActionIcone
+                          icone={Clock}
+                          label="Signaler un retard"
+                          ton="warning"
+                          disabled={enCours === d.id}
+                          onClick={() => ouvrirRetard(d)}
+                        />
                       )}
-                    </div>
-                  </Td>
+                      {gestionnaire && (
+                        <MenuActions
+                          disabled={enCours === d.id}
+                          items={[
+                            {
+                              label: 'Annuler le départ',
+                              icone: XCircle,
+                              ton: 'danger',
+                              onClick: () => handleAnnuler(d),
+                              masque: d.statut === 'annule' || d.statut === 'arrive',
+                            },
+                          ]}
+                        />
+                      )}
+                    </Actions>
+                  </TdActions>
                 </Tr>
               ))}
             </tbody>
@@ -346,5 +456,25 @@ export default function DepartsPage() {
         )}
       </Card>
     </DashboardShell>
+  );
+}
+
+/** Remplissage d'un départ : places vendues / total, avec une jauge colorée. */
+function Remplissage({ libres, total }: { libres: number; total: number }) {
+  const vendues = Math.max(0, total - libres);
+  const taux = total > 0 ? vendues / total : 0;
+  const couleur = taux >= 0.9 ? 'bg-danger' : taux >= 0.6 ? 'bg-warning' : 'bg-success';
+  return (
+    <div className="min-w-[110px]">
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className="tabular-nums font-medium text-ink">
+          {vendues}/{total}
+        </span>
+        <span className="tabular-nums text-ink-faint">{libres} libre{libres > 1 ? 's' : ''}</span>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-line-soft">
+        <div className={`h-full rounded-full ${couleur} transition-all`} style={{ width: `${Math.round(taux * 100)}%` }} />
+      </div>
+    </div>
   );
 }

@@ -18,6 +18,7 @@ import { useAuthGuard } from '@/lib/auth';
 import { COMPAGNIE_NAV } from '@/lib/nav';
 import { DEMANDES_REVERSEMENT, JEKO, MONTANT_DEMANDE } from '@/lib/capacites';
 import { formatDateHeure, formatFcfa } from '@/lib/format';
+import { useConfirmer, useNotifier } from '@/components/ui/Dialogues';
 
 // Minimum d'une demande à montant choisi (contrat MONTANT_DEMANDE).
 const MONTANT_MIN = 100;
@@ -25,6 +26,8 @@ const MONTANT_MIN = 100;
 // L'équipe Yègo déclenche les reversements ; la compagnie peut en faire la demande.
 export default function MesReversementsPage() {
   const { user, ready } = useAuthGuard(['company_admin']);
+  const confirmer = useConfirmer();
+  const notifier = useNotifier();
   const [apercu, setApercu] = useState<Apercu | null>(null);
   const [solde, setSolde] = useState<Solde | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -89,13 +92,22 @@ export default function MesReversementsPage() {
   }
 
   async function annulerEnAttente(id: number) {
-    if (!confirm(`Annuler votre demande de reversement #${id} ?`)) return;
+    if (
+      !(await confirmer({
+        titre: `Annuler votre demande de reversement #${id} ?`,
+        libelleConfirmer: 'Annuler la demande',
+        libelleAnnuler: 'Retour',
+        ton: 'danger',
+      }))
+    )
+      return;
     try {
       await reversementsApi.annulerDemande(id);
       setCleDemandes((k) => k + 1);
       charger();
+      notifier.succes('Demande annulée.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de l’annulation');
+      notifier.erreur(err, 'Erreur lors de l’annulation');
     }
   }
 
