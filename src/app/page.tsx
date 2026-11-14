@@ -35,7 +35,7 @@ import BilletInteractif from '@/components/landing/BilletInteractif';
 import GrilleProjecteur from '@/components/landing/GrilleProjecteur';
 import Parcours from '@/components/landing/Parcours';
 import WhatsAppFlottant from '@/components/landing/WhatsAppFlottant';
-import EcransApp from '@/components/landing/EcransApp';
+import EcransApp, { TelephoneDemo } from '@/components/landing/EcransApp';
 import {
   CarteGps,
   Defilant,
@@ -43,7 +43,6 @@ import {
   MotifQr,
   NotificationsPaiement,
   PlanSieges,
-  TelephoneDemo,
 } from '@/components/landing/Illustrations';
 
 export const metadata: Metadata = {

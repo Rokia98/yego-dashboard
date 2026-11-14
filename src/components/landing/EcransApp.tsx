@@ -20,6 +20,7 @@ import {
   RotateCw,
   Search,
   Smartphone,
+  ShieldCheck,
   Ticket,
   User,
   Users,
@@ -27,6 +28,8 @@ import {
 } from 'lucide-react';
 import { EpingleYego } from './Logo';
 import { MotifQr } from './Illustrations';
+import { LogoPaiement } from './Paiements';
+import { MOBILE_MONEY } from './moyensPaiement';
 
 /*
   Vitrine de l'application mobile, au style des visuels des stores :
@@ -216,6 +219,60 @@ export default function EcransApp() {
         </div>
       </div>
     </section>
+  );
+}
+
+/* ------------------------------------------------- Démo animée (section voyageurs) */
+
+const ETAPES_DEMO: { label: string; Ecran: () => React.ReactElement }[] = [
+  { label: 'Réserver', Ecran: EcranAccueil },
+  { label: 'Payer', Ecran: EcranPaiement },
+  { label: 'Embarquer', Ecran: EcranBillet },
+];
+
+/**
+ * Un seul téléphone qui enchaîne les vrais écrans de l'app (recherche,
+ * paiement, billet) en boucle, avec les étapes en dessous.
+ */
+export function TelephoneDemo() {
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <div
+          aria-hidden
+          className="absolute -inset-12 rounded-full bg-[radial-gradient(circle,rgba(230,126,34,0.28),transparent_65%)]"
+        />
+        <div
+          aria-hidden
+          className="absolute -inset-x-16 top-16 bottom-16 -z-0 rounded-[3rem]"
+          style={{ background: `linear-gradient(160deg, ${NAVY}, #26364a)` }}
+        />
+        <div className="relative">
+          <Telephone>
+            {ETAPES_DEMO.map(({ label, Ecran }, i) => (
+              <div
+                key={label}
+                className="lp-ecran absolute inset-0"
+                style={{ ['--d' as string]: `${i * 4}s` }}
+              >
+                <Ecran />
+              </div>
+            ))}
+          </Telephone>
+        </div>
+      </div>
+      <ol className="mt-10 flex gap-2">
+        {ETAPES_DEMO.map(({ label }, i) => (
+          <li
+            key={label}
+            className="lp-etape-demo rounded-full border px-3 py-1 text-xs font-semibold"
+            style={{ ['--d' as string]: `${i * 4}s` }}
+          >
+            {i + 1}. {label}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -496,6 +553,68 @@ function EcranSieges() {
         </div>
         <span className="flex items-center gap-1 rounded-xl px-3.5 py-2 text-[11px] font-extrabold text-white" style={{ background: ORANGE }}>
           Continuer <ArrowRight className="h-3 w-3" />
+        </span>
+      </div>
+    </>
+  );
+}
+
+function EcranPaiement() {
+  return (
+    <>
+      <EnteteNavy titre="Paiement" sousTitre="Abidjan → Bouaké · 08:30 · Sièges 9 et 10" />
+      <div className="mx-3 mt-3 rounded-2xl bg-white p-3">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-[10px] font-bold">
+            <span className="rounded-md px-1.5 py-0.5 text-[7px] text-white" style={{ background: NAVY }}>
+              IV
+            </span>
+            Ivoire Voyages
+          </span>
+          <span className="text-[8px] font-semibold text-[#8a95a3]">Sam. 14 nov.</span>
+        </div>
+        <div className="mt-2 space-y-1 text-[9px]">
+          {[
+            ['2 places × 5 500 FCFA', '11 000'],
+            ['Frais de service', '0'],
+          ].map(([l, m]) => (
+            <p key={l} className="flex justify-between text-[#5b6572]">
+              <span>{l}</span>
+              <span className="font-bold text-[#1f2d3d]">{m} FCFA</span>
+            </p>
+          ))}
+        </div>
+      </div>
+      <p className="mx-4 mt-3 text-[8px] font-bold tracking-wider text-[#5b6572]">PAYER AVEC MOBILE MONEY</p>
+      <div className="mx-3 mt-1.5 space-y-1.5">
+        {MOBILE_MONEY.slice(0, 4).map((m, i) => (
+          <div
+            key={m.nom}
+            className="flex items-center justify-between rounded-xl bg-white px-2.5 py-1.5"
+            style={i === 0 ? { boxShadow: `0 0 0 1.5px ${ORANGE}` } : undefined}
+          >
+            <span className="flex items-center gap-2 text-[10px] font-extrabold">
+              <LogoPaiement moyen={m} taille={22} className="rounded-md" /> {m.nom}
+            </span>
+            <span
+              className="flex h-3.5 w-3.5 items-center justify-center rounded-full border-2"
+              style={i === 0 ? { borderColor: ORANGE, background: ORANGE } : { borderColor: '#c9d0d8' }}
+            >
+              {i === 0 && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 flex items-center justify-center gap-1 text-[8px] font-semibold text-[#5b6572]">
+        <ShieldCheck className="h-3 w-3 text-[#27ae60]" /> Paiement sécurisé
+      </p>
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-[#e3e7ec] bg-white px-4 pb-4 pt-2.5">
+        <div>
+          <p className="text-[8px] text-[#5b6572]">Total à payer</p>
+          <p className="text-[14px] font-extrabold">11 000 FCFA</p>
+        </div>
+        <span className="flex items-center gap-1 rounded-xl px-3.5 py-2 text-[11px] font-extrabold text-white" style={{ background: ORANGE }}>
+          Payer <ArrowRight className="h-3 w-3" />
         </span>
       </div>
     </>
