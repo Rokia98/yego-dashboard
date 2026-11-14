@@ -504,22 +504,3 @@ html:has(.lp) {
 .est-visible .lp-lettre {
   transform: none;
 }
-
-/* ---------- Carrousel des écrans de l'app ---------- */
-
-.lp-carrousel {
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.lp-carrousel::-webkit-scrollbar {
-  display: none;
-}
-
-/* Halo pulsé autour du car suivi en direct */
-.lp-pulse {
-  animation: lp-pulse 2s ease-out infinite;
-}
-@keyframes lp-pulse {
-  0% { box-shadow: 0 0 0 0 rgb(230 126 34 / 0.55); }
-  100% { box-shadow: 0 0 0 16px rgb(230 126 34 / 0); }
-}
