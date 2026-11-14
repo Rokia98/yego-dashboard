@@ -19,7 +19,6 @@ import {
   QrCode,
   RotateCw,
   Search,
-  Smartphone,
   ShieldCheck,
   Ticket,
   User,
@@ -49,13 +48,6 @@ const DIAPOS: Diapo[] = [
   { titre: 'Votre billet', accent: 'dans la poche', sousTitre: 'Un QR code, et vous montez à bord', Ecran: EcranBillet },
   { titre: 'Suivez votre bus', accent: 'en direct', sousTitre: 'Sachez exactement où il se trouve', Ecran: EcranSuivi },
   { titre: 'Embarquement', accent: 'sans file', sousTitre: 'Les agents scannent, vous montez', Ecran: EcranScan },
-];
-
-const ATOUTS: { icone: LucideIcon; titre: string; texte: string }[] = [
-  { icone: Search, titre: 'Réservation en ligne', texte: 'En quelques secondes' },
-  { icone: Smartphone, titre: 'Paiement Mobile Money', texte: 'Orange, MTN, Moov, Wave' },
-  { icone: QrCode, titre: 'Billet QR code', texte: 'Toujours dans votre poche' },
-  { icone: Navigation, titre: 'Suivi en direct', texte: 'Votre bus sur la carte' },
 ];
 
 export default function EcransApp() {
@@ -118,36 +110,8 @@ export default function EcransApp() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <EpingleYego className="mx-auto h-14 w-14 drop-shadow-[0_10px_24px_rgba(230,126,34,0.45)]" />
-          <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
-            Voyagez avec <span style={{ color: ORANGE }}>Yègo</span>
-          </h2>
-          <p className="mt-4 text-base text-white/75 sm:text-lg">
-            L’application des voyageurs : réservation, paiement, billet et suivi du car, dans la poche.
-          </p>
-        </div>
-
-        <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {ATOUTS.map(({ icone: Icone, titre, texte }) => (
-            <div
-              key={titre}
-              className="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.1]"
-            >
-              <span
-                className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-[0_8px_20px_-8px_rgba(230,126,34,0.9)]"
-                style={{ background: ORANGE }}
-              >
-                <Icone className="h-5 w-5" strokeWidth={2} />
-              </span>
-              <p className="mt-3 text-sm font-bold leading-snug">{titre}</p>
-              <p className="mt-1 text-xs text-white/65">{texte}</p>
-            </div>
-          ))}
-        </div>
-
         {/* Carrousel */}
-        <div className="relative mt-14">
+        <div className="relative">
           <div
             ref={piste}
             className="lp-carrousel mx-[calc(50%-50vw)] flex snap-x snap-mandatory gap-6 overflow-x-auto px-[max(1rem,calc(50vw-140px))] pb-6 sm:px-[max(1rem,calc(50vw-150px))] lg:px-[max(1.5rem,calc(50vw-560px))]"
